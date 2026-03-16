@@ -596,10 +596,32 @@
   }
   .chart-container { position: relative; height: 260px; }
   .events-breakdown { margin-top: 2rem; }
+  .events-breakdown-header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
   .events-breakdown-title {
     font-size: 0.82rem; font-weight: 700;
     letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--text-3); margin-bottom: 1rem;
+    color: var(--text-3); margin-bottom: 0;
+  }
+  .event-sort-controls {
+    display: flex; gap: 0.4rem;
+  }
+  .event-sort-btn {
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-size: 0.74rem; font-weight: 700;
+    cursor: pointer; border: 1px solid var(--border);
+    background: transparent; color: var(--text-3);
+    font-family: inherit;
+    transition: all var(--transition);
+  }
+  .event-sort-btn:hover { border-color: var(--border-hover); color: var(--text-2); }
+  .event-sort-btn.active {
+    background: var(--accent); border-color: var(--accent);
+    color: #fff;
   }
   .event-row {
     display: flex; align-items: center; gap: 1rem;
@@ -815,7 +837,14 @@
         </div>
       </div>
       <div class="events-breakdown">
-        <div class="events-breakdown-title">🎯 Event Breakdown</div>
+        <div class="events-breakdown-header">
+          <div class="events-breakdown-title">🎯 Event Breakdown</div>
+          <div class="event-sort-controls">
+            <button class="event-sort-btn active" id="sortBySeason" onclick="sortEventsBy('season')">Season</button>
+            <button class="event-sort-btn" id="sortByEvent" onclick="sortEventsBy('event')">Event A–Z</button>
+            <button class="event-sort-btn" id="sortByPoints" onclick="sortEventsBy('points')">Points</button>
+          </div>
+        </div>
         <div id="eventsBreakdown"></div>
       </div>
     </div>
@@ -1545,10 +1574,55 @@ function resetFilters() {
 }
 
 // ===================== MODAL =====================
+let currentEventSort = 'season';
+let currentModalAthlete = null;
+
+function sortEventsBy(mode) {
+  currentEventSort = mode;
+  // Update active button
+  ['season','event','points'].forEach(m => {
+    const btn = document.getElementById('sortBy' + m.charAt(0).toUpperCase() + m.slice(1));
+    if (btn) btn.classList.toggle('active', m === mode);
+  });
+  if (currentModalAthlete) renderEventsBreakdown(currentModalAthlete);
+}
+
+function renderEventsBreakdown(athlete) {
+  let events = [...athlete.events];
+  if (currentEventSort === 'season') {
+    events.sort((a, b) => a.year.localeCompare(b.year) || a.event.localeCompare(b.event));
+  } else if (currentEventSort === 'event') {
+    events.sort((a, b) => a.event.localeCompare(b.event));
+  } else if (currentEventSort === 'points') {
+    events.sort((a, b) => b.score - a.score);
+  }
+  const maxScore = Math.max(...events.map(e => e.score), 1);
+  document.getElementById('eventsBreakdown').innerHTML = events.map(e => `
+    <div class="event-row">
+      <span class="event-name">${e.event}</span>
+      <span class="event-year-tag">${e.year}</span>
+      <div class="event-bar-wrap">
+        <div class="event-bar-bg">
+          <div class="event-bar-fill" style="width:${Math.round((e.score/maxScore)*100)}%"></div>
+        </div>
+      </div>
+      <span class="event-pts">${e.score}</span>
+    </div>
+  `).join('');
+}
+
 function openModal(name) {
   const key = name.toLowerCase().trim();
   const athlete = athleteMap[key];
   if (!athlete) return;
+
+  currentModalAthlete = athlete;
+  // Reset sort to season on each open
+  currentEventSort = 'season';
+  ['Season','Event','Points'].forEach(m => {
+    const btn = document.getElementById('sortBy' + m);
+    if (btn) btn.classList.toggle('active', m === 'Season');
+  });
 
   // Header
   document.getElementById('modalAvatar').textContent = getInitials(athlete.name);
@@ -1589,20 +1663,7 @@ function openModal(name) {
   renderPerformanceChart(athlete);
 
   // Events breakdown
-  const sortedEvents = [...athlete.events].sort((a,b) => b.score - a.score);
-  const maxScore = sortedEvents[0]?.score || 1;
-  document.getElementById('eventsBreakdown').innerHTML = sortedEvents.map(e => `
-    <div class="event-row">
-      <span class="event-name">${e.event}</span>
-      <span class="event-year-tag">${e.year}</span>
-      <div class="event-bar-wrap">
-        <div class="event-bar-bg">
-          <div class="event-bar-fill" style="width:${Math.round((e.score/maxScore)*100)}%"></div>
-        </div>
-      </div>
-      <span class="event-pts">${e.score}</span>
-    </div>
-  `).join('');
+  renderEventsBreakdown(athlete);
 
   document.getElementById('modalBackdrop').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -1614,23 +1675,30 @@ function renderPerformanceChart(athlete) {
 
   const years = Object.keys(athlete.years).sort();
   const pts = years.map(y => athlete.years[y]);
+  const maxPts = Math.max(...pts);
+
+  // Gradient fill under the line
+  const gradient = ctx.createLinearGradient(0, 0, 0, 260);
+  gradient.addColorStop(0, 'rgba(224,48,48,0.35)');
+  gradient.addColorStop(1, 'rgba(224,48,48,0.02)');
 
   chartInstance = new Chart(ctx, {
-    type: 'bar',
+    type: 'line',
     data: {
       labels: years,
       datasets: [{
         label: 'Points',
         data: pts,
-        backgroundColor: years.map((_, i) => i === pts.indexOf(Math.max(...pts))
-          ? 'rgba(224,48,48,0.85)'
-          : 'rgba(48,96,232,0.55)'),
-        borderColor: years.map((_, i) => i === pts.indexOf(Math.max(...pts))
-          ? '#e03030'
-          : '#3060e8'),
-        borderWidth: 1.5,
-        borderRadius: 8,
-        borderSkipped: false,
+        fill: true,
+        backgroundColor: gradient,
+        borderColor: '#e03030',
+        borderWidth: 2.5,
+        tension: 0.35,
+        pointBackgroundColor: pts.map(p => p === maxPts ? '#e03030' : '#3060e8'),
+        pointBorderColor: pts.map(p => p === maxPts ? '#fff' : 'rgba(255,255,255,0.5)'),
+        pointBorderWidth: pts.map(p => p === maxPts ? 2.5 : 1.5),
+        pointRadius: pts.map(p => p === maxPts ? 7 : 5),
+        pointHoverRadius: 9,
       }]
     },
     options: {
@@ -1656,7 +1724,7 @@ function renderPerformanceChart(athlete) {
           ticks: { color: '#9898b8', font: { size: 11, weight: '600' } }
         },
         y: {
-          grid: { color: 'rgba(255,255,255,0.04)' },
+          grid: { color: 'rgba(255,255,255,0.06)' },
           ticks: { color: '#9898b8', font: { size: 11 } },
           beginAtZero: true
         }
