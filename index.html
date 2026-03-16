@@ -589,12 +589,47 @@
   .modal-stat .stat-label { margin-bottom: 0.3rem; }
   .modal-stat .stat-value { font-size: 1.4rem; }
   .chart-section { margin-top: 0.5rem; }
+  .chart-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
   .chart-title {
     font-size: 0.82rem; font-weight: 700;
     letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--text-3); margin-bottom: 1rem;
+    color: var(--text-3); margin-bottom: 0;
+  }
+  .chart-toggle {
+    display: flex; gap: 0.4rem;
+  }
+  .chart-toggle-btn {
+    padding: 5px 14px;
+    border-radius: 100px;
+    font-size: 0.76rem; font-weight: 700;
+    cursor: pointer; border: 1px solid var(--border);
+    background: transparent; color: var(--text-3);
+    font-family: inherit;
+    transition: all var(--transition);
+  }
+  .chart-toggle-btn:hover { border-color: var(--border-hover); color: var(--text-2); }
+  .chart-toggle-btn.active {
+    background: linear-gradient(135deg, #e03030 0%, #b81c1c 100%);
+    border-color: #e03030; color: #fff;
+    box-shadow: 0 2px 12px rgba(224,48,48,0.3);
   }
   .chart-container { position: relative; height: 260px; }
+  .chart-container.tall { height: 320px; }
+  .chart-legend {
+    display: flex; flex-wrap: wrap; gap: 0.5rem 1rem;
+    margin-top: 0.75rem;
+  }
+  .chart-legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.74rem; color: var(--text-2); font-weight: 500;
+  }
+  .chart-legend-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
   .events-breakdown { margin-top: 2rem; }
   .events-breakdown-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -831,10 +866,17 @@
     <div class="modal-body">
       <div class="modal-stats-grid" id="modalStatsGrid"></div>
       <div class="chart-section">
-        <div class="chart-title">📈 Yearly Performance</div>
-        <div class="chart-container">
+        <div class="chart-section-header">
+          <div class="chart-title">📈 Performance</div>
+          <div class="chart-toggle">
+            <button class="chart-toggle-btn active" id="chartViewYearly" onclick="switchChartView('yearly')">Year to Year</button>
+            <button class="chart-toggle-btn" id="chartViewEvents" onclick="switchChartView('events')">By Event</button>
+          </div>
+        </div>
+        <div class="chart-container" id="chartContainer">
           <canvas id="performanceChart"></canvas>
         </div>
+        <div class="chart-legend" id="chartLegend"></div>
       </div>
       <div class="events-breakdown">
         <div class="events-breakdown-header">
@@ -1617,6 +1659,12 @@ function openModal(name) {
   if (!athlete) return;
 
   currentModalAthlete = athlete;
+  // Reset chart view to yearly on each open
+  currentChartView = 'yearly';
+  document.getElementById('chartViewYearly').classList.add('active');
+  document.getElementById('chartViewEvents').classList.remove('active');
+  document.getElementById('chartContainer').classList.remove('tall');
+  document.getElementById('chartLegend').innerHTML = '';
   // Reset sort to season on each open
   currentEventSort = 'season';
   ['Season','Event','Points'].forEach(m => {
@@ -1669,15 +1717,37 @@ function openModal(name) {
   document.body.style.overflow = 'hidden';
 }
 
+// Palette for multi-line event chart
+const EVENT_COLORS = [
+  '#e03030','#3060e8','#22c55e','#f59e0b','#a855f7','#06b6d4',
+  '#f97316','#ec4899','#84cc16','#14b8a6','#8b5cf6','#ef4444'
+];
+
+let currentChartView = 'yearly';
+
+function switchChartView(view) {
+  currentChartView = view;
+  document.getElementById('chartViewYearly').classList.toggle('active', view === 'yearly');
+  document.getElementById('chartViewEvents').classList.toggle('active', view === 'events');
+  if (!currentModalAthlete) return;
+  if (view === 'yearly') {
+    document.getElementById('chartContainer').classList.remove('tall');
+    renderPerformanceChart(currentModalAthlete);
+  } else {
+    document.getElementById('chartContainer').classList.add('tall');
+    renderEventsByYearChart(currentModalAthlete);
+  }
+}
+
 function renderPerformanceChart(athlete) {
   const ctx = document.getElementById('performanceChart').getContext('2d');
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  document.getElementById('chartLegend').innerHTML = '';
 
   const years = Object.keys(athlete.years).sort();
   const pts = years.map(y => athlete.years[y]);
   const maxPts = Math.max(...pts);
 
-  // Gradient fill under the line
   const gradient = ctx.createLinearGradient(0, 0, 0, 260);
   gradient.addColorStop(0, 'rgba(224,48,48,0.35)');
   gradient.addColorStop(1, 'rgba(224,48,48,0.02)');
@@ -1687,7 +1757,7 @@ function renderPerformanceChart(athlete) {
     data: {
       labels: years,
       datasets: [{
-        label: 'Points',
+        label: 'Total Points',
         data: pts,
         fill: true,
         backgroundColor: gradient,
@@ -1713,24 +1783,88 @@ function renderPerformanceChart(athlete) {
           titleColor: '#f0f0ff',
           bodyColor: '#9898b8',
           padding: 12,
+          callbacks: { label: ctx => ` ${ctx.parsed.y} pts` }
+        }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#9898b8', font: { size: 11, weight: '600' } } },
+        y: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#9898b8', font: { size: 11 } }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+function renderEventsByYearChart(athlete) {
+  const ctx = document.getElementById('performanceChart').getContext('2d');
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+  // All seasons sorted
+  const allSeasons = Object.keys(athlete.years).sort();
+
+  // Build a map: eventName -> { season: score }
+  const eventSeasonMap = {};
+  athlete.events.forEach(e => {
+    if (!eventSeasonMap[e.event]) eventSeasonMap[e.event] = {};
+    // If athlete competed in same event multiple times in a season, sum scores
+    eventSeasonMap[e.event][e.year] = (eventSeasonMap[e.event][e.year] || 0) + e.score;
+  });
+
+  // Sort events alphabetically
+  const eventNames = Object.keys(eventSeasonMap).sort();
+
+  const datasets = eventNames.map((evName, i) => {
+    const color = EVENT_COLORS[i % EVENT_COLORS.length];
+    return {
+      label: evName,
+      data: allSeasons.map(s => eventSeasonMap[evName][s] ?? null),
+      borderColor: color,
+      backgroundColor: color + '22',
+      borderWidth: 2,
+      tension: 0.3,
+      spanGaps: false,
+      pointBackgroundColor: color,
+      pointBorderColor: 'rgba(255,255,255,0.6)',
+      pointBorderWidth: 1.5,
+      pointRadius: 5,
+      pointHoverRadius: 8,
+    };
+  });
+
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: { labels: allSeasons, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(14,14,22,0.96)',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          titleColor: '#f0f0ff',
+          bodyColor: '#9898b8',
+          padding: 12,
           callbacks: {
-            label: ctx => ` ${ctx.parsed.y} pts`
+            label: ctx => ctx.parsed.y !== null ? ` ${ctx.dataset.label}: ${ctx.parsed.y} pts` : null,
+            filter: item => item.parsed.y !== null
           }
         }
       },
       scales: {
-        x: {
-          grid: { color: 'rgba(255,255,255,0.04)' },
-          ticks: { color: '#9898b8', font: { size: 11, weight: '600' } }
-        },
-        y: {
-          grid: { color: 'rgba(255,255,255,0.06)' },
-          ticks: { color: '#9898b8', font: { size: 11 } },
-          beginAtZero: true
-        }
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#9898b8', font: { size: 11, weight: '600' } } },
+        y: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#9898b8', font: { size: 11 } }, beginAtZero: true }
       }
     }
   });
+
+  // Render custom legend
+  const legend = document.getElementById('chartLegend');
+  legend.innerHTML = eventNames.map((evName, i) => {
+    const color = EVENT_COLORS[i % EVENT_COLORS.length];
+    return `<div class="chart-legend-item"><div class="chart-legend-dot" style="background:${color}"></div>${evName}</div>`;
+  }).join('');
 }
 
 function closeModal(e) {
