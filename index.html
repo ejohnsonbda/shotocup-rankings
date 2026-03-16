@@ -1,0 +1,1700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shoto Cup — Athlete Rankings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  /* ===================== DESIGN TOKENS ===================== */
+  :root {
+    --bg: #080810;
+    --surface-1: rgba(14,14,22,0.96);
+    --surface-2: rgba(20,20,32,0.92);
+    --surface-3: #0d0d18;
+    --border: rgba(255,255,255,0.07);
+    --border-hover: rgba(255,255,255,0.14);
+    --text: #f0f0ff;
+    --text-2: #9898b8;
+    --text-3: #5a5a7a;
+    --accent: #e03030;
+    --accent-glow: rgba(224,48,48,0.22);
+    --accent-2: #3060e8;
+    --accent-2-glow: rgba(48,96,232,0.18);
+    --green: #22c55e;
+    --amber: #f59e0b;
+    --radius-xl: 28px;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+    --shadow-card: 0 24px 64px rgba(0,0,0,0.55), 0 2px 0 rgba(255,255,255,0.04) inset;
+    --shadow-btn: 0 4px 20px rgba(0,0,0,0.4);
+    --transition: 0.18s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  /* ===================== RESET & BASE ===================== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* ===================== BACKGROUND SYSTEM ===================== */
+  .bg-mesh {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  }
+  .bg-mesh::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 0% 0%, rgba(224,48,48,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 100% 0%, rgba(48,96,232,0.10) 0%, transparent 55%),
+      radial-gradient(ellipse 70% 60% at 50% 100%, rgba(48,96,232,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 100% 100%, rgba(224,48,48,0.07) 0%, transparent 50%);
+  }
+  .bg-grid {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+  }
+
+  /* ===================== HERO ===================== */
+  .hero {
+    position: relative;
+    min-height: 52vh;
+    display: flex;
+    align-items: flex-end;
+    padding: 0 clamp(1.5rem, 5vw, 5rem) 4rem;
+    overflow: hidden;
+    z-index: 1;
+  }
+  .hero-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(8,8,20,0.92) 0%, rgba(60,10,10,0.55) 60%, rgba(8,8,20,0.85) 100%);
+    z-index: 1;
+  }
+  .hero-fade {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 180px;
+    background: linear-gradient(to bottom, transparent, var(--bg));
+    z-index: 2;
+  }
+  .hero-content {
+    position: relative; z-index: 3;
+    max-width: 900px;
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-2);
+    margin-bottom: 1.4rem;
+  }
+  .hero-eyebrow .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse-dot 2s infinite;
+  }
+  @keyframes pulse-dot {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+  .hero-title {
+    font-size: clamp(2.8rem, 7vw, 5.8rem);
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin-bottom: 1rem;
+  }
+  .hero-title span { color: var(--accent); }
+  .hero-sub {
+    font-size: clamp(1rem, 2vw, 1.25rem);
+    font-weight: 400;
+    color: var(--text-2);
+    max-width: 560px;
+  }
+
+  /* ===================== MAIN LAYOUT ===================== */
+  .app-section {
+    position: relative; z-index: 1;
+    padding: 0 clamp(1rem, 4vw, 4rem) 6rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* ===================== STATS BAR ===================== */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+  .stat-card {
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.2rem 1.4rem;
+    transition: border-color var(--transition), transform var(--transition);
+  }
+  .stat-card:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+  .stat-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 0.4rem;
+  }
+  .stat-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.blue { color: var(--accent-2); }
+  .stat-value.green { color: var(--green); }
+
+  /* ===================== SECTION HEADER ===================== */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .section-title {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .section-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.3rem;
+  }
+
+  /* ===================== CARD ===================== */
+  .card {
+    background: var(--surface-1);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+    margin-bottom: 2rem;
+    transition: border-color var(--transition);
+  }
+  .card:hover { border-color: var(--border-hover); }
+  .card-header {
+    padding: 1.4rem 1.8rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .card-header-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .card-body { padding: 1.8rem; }
+
+  /* ===================== CONTROLS ===================== */
+  .controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+  }
+  .field { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; min-width: 180px; }
+  .field-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-3);
+  }
+  .input-wrap { position: relative; }
+  input[type="text"], select {
+    width: 100%;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 500;
+    outline: none;
+    transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input[type="text"]::placeholder { color: var(--text-3); }
+  input[type="text"]:focus, select:focus {
+    border-color: rgba(224,48,48,0.5);
+    box-shadow: 0 0 0 3px rgba(224,48,48,0.12);
+    background: rgba(14,14,22,0.98);
+  }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239898b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+  select option { background: #0d0d18; color: var(--text); }
+
+  /* ===================== BUTTONS ===================== */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 20px;
+    border: none; border-radius: var(--radius-md);
+    font-family: inherit; font-size: 0.88rem; font-weight: 700;
+    cursor: pointer; text-decoration: none;
+    transition: transform var(--transition), box-shadow var(--transition), filter var(--transition);
+    white-space: nowrap;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(0); }
+  .btn-primary {
+    background: linear-gradient(135deg, #e03030 0%, #b81c1c 100%);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(224,48,48,0.35);
+  }
+  .btn-primary:hover { box-shadow: 0 6px 28px rgba(224,48,48,0.5); }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-2);
+  }
+  .btn-ghost:hover { border-color: var(--border-hover); color: var(--text); background: rgba(255,255,255,0.04); }
+  .btn-blue {
+    background: linear-gradient(135deg, #3060e8 0%, #1a3fb0 100%);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(48,96,232,0.35);
+  }
+
+  /* ===================== TOP 5 PODIUM ===================== */
+  .top5-section { margin-bottom: 2.5rem; }
+  .year-tabs {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .year-tab {
+    padding: 7px 18px;
+    border-radius: 100px;
+    font-size: 0.82rem; font-weight: 700;
+    cursor: pointer; border: 1px solid var(--border);
+    background: transparent; color: var(--text-2);
+    transition: all var(--transition);
+  }
+  .year-tab:hover { border-color: var(--border-hover); color: var(--text); }
+  .year-tab.active {
+    background: linear-gradient(135deg, #e03030 0%, #b81c1c 100%);
+    border-color: transparent; color: #fff;
+    box-shadow: 0 4px 16px rgba(224,48,48,0.35);
+  }
+  .podium-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+  }
+  @media (max-width: 900px) { .podium-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 600px) { .podium-grid { grid-template-columns: repeat(2, 1fr); } }
+  .podium-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.4rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition);
+    position: relative;
+    overflow: hidden;
+  }
+  .podium-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+  .podium-card:hover { border-color: var(--border-hover); transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.4); }
+  .podium-card:hover::before { opacity: 1; }
+  .podium-card.rank-1 { border-color: rgba(251,191,36,0.35); }
+  .podium-card.rank-1::before { background: linear-gradient(90deg, transparent, #fbbf24, transparent); opacity: 0.6; }
+  .podium-card.rank-2 { border-color: rgba(148,163,184,0.3); }
+  .podium-card.rank-2::before { background: linear-gradient(90deg, transparent, #94a3b8, transparent); opacity: 0.5; }
+  .podium-card.rank-3 { border-color: rgba(180,120,60,0.3); }
+  .podium-card.rank-3::before { background: linear-gradient(90deg, transparent, #b4783c, transparent); opacity: 0.5; }
+  .podium-rank {
+    font-size: 1.6rem; font-weight: 900; margin-bottom: 0.5rem;
+    letter-spacing: -0.03em;
+  }
+  .rank-1 .podium-rank { color: #fbbf24; }
+  .rank-2 .podium-rank { color: #94a3b8; }
+  .rank-3 .podium-rank { color: #b4783c; }
+  .rank-4 .podium-rank, .rank-5 .podium-rank { color: var(--text-3); }
+  .podium-avatar {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; font-weight: 800;
+    color: #fff;
+    margin: 0 auto 0.8rem;
+    border: 2px solid rgba(255,255,255,0.1);
+  }
+  .podium-name {
+    font-size: 0.9rem; font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+    line-height: 1.3;
+  }
+  .podium-pts {
+    font-size: 1.1rem; font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+  .podium-pts-label {
+    font-size: 0.68rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-3);
+  }
+
+  /* ===================== RANKINGS TABLE ===================== */
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  thead th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: color var(--transition);
+  }
+  thead th:hover { color: var(--text-2); }
+  thead th.sorted { color: var(--accent); }
+  thead th .sort-icon { margin-left: 4px; opacity: 0.5; }
+  thead th.sorted .sort-icon { opacity: 1; }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  tbody td { padding: 12px 14px; vertical-align: middle; }
+  .rank-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    font-size: 0.8rem; font-weight: 800;
+    background: var(--surface-3);
+    color: var(--text-2);
+  }
+  .rank-badge.gold { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  .rank-badge.silver { background: rgba(148,163,184,0.15); color: #94a3b8; }
+  .rank-badge.bronze { background: rgba(180,120,60,0.15); color: #b4783c; }
+  .athlete-cell { display: flex; align-items: center; gap: 10px; }
+  .athlete-avatar-sm {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 800; color: #fff;
+    flex-shrink: 0;
+  }
+  .athlete-name-cell { font-weight: 600; color: var(--text); }
+  .pts-cell { font-weight: 800; color: var(--accent); font-size: 1rem; }
+  .events-cell { color: var(--text-2); font-size: 0.85rem; }
+  .year-pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 0.72rem; font-weight: 700;
+    background: rgba(48,96,232,0.15);
+    color: var(--accent-2);
+    border: 1px solid rgba(48,96,232,0.25);
+  }
+  .no-results {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-3);
+    font-size: 0.95rem;
+  }
+
+  /* ===================== PAGINATION ===================== */
+  .pagination {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 1rem;
+    padding: 1rem 1.8rem;
+    border-top: 1px solid var(--border);
+  }
+  .pagination-info { font-size: 0.82rem; color: var(--text-3); }
+  .pagination-controls { display: flex; gap: 0.5rem; }
+  .page-btn {
+    width: 34px; height: 34px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-2);
+    font-family: inherit; font-size: 0.85rem; font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .page-btn:hover { border-color: var(--border-hover); color: var(--text); background: rgba(255,255,255,0.04); }
+  .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* ===================== MODAL ===================== */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 1.5rem;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.22s ease;
+  }
+  .modal-backdrop.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 40px 100px rgba(0,0,0,0.7);
+    width: 100%; max-width: 760px;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: translateY(20px) scale(0.97);
+    transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
+  }
+  .modal-backdrop.open .modal { transform: translateY(0) scale(1); }
+  .modal-header {
+    padding: 1.8rem 2rem 1.4rem;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+  }
+  .modal-athlete-info { display: flex; align-items: center; gap: 1.2rem; }
+  .modal-avatar {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; font-weight: 900; color: #fff;
+    border: 2px solid rgba(255,255,255,0.12);
+    flex-shrink: 0;
+  }
+  .modal-name { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 0.25rem; }
+  .modal-meta { font-size: 0.82rem; color: var(--text-2); }
+  .modal-close {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 1px solid var(--border);
+    background: transparent; color: var(--text-2);
+    font-size: 1.2rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all var(--transition); flex-shrink: 0;
+  }
+  .modal-close:hover { border-color: var(--border-hover); color: var(--text); background: rgba(255,255,255,0.06); }
+  .modal-body { padding: 1.8rem 2rem; }
+  .modal-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.8rem;
+    margin-bottom: 2rem;
+  }
+  .modal-stat {
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.2rem;
+  }
+  .modal-stat .stat-label { margin-bottom: 0.3rem; }
+  .modal-stat .stat-value { font-size: 1.4rem; }
+  .chart-section { margin-top: 0.5rem; }
+  .chart-title {
+    font-size: 0.82rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-3); margin-bottom: 1rem;
+  }
+  .chart-container { position: relative; height: 260px; }
+  .events-breakdown { margin-top: 2rem; }
+  .events-breakdown-title {
+    font-size: 0.82rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-3); margin-bottom: 1rem;
+  }
+  .event-row {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .event-row:last-child { border-bottom: none; }
+  .event-name { flex: 1; font-size: 0.88rem; font-weight: 500; color: var(--text-2); }
+  .event-year-tag {
+    font-size: 0.7rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 100px;
+    background: rgba(255,255,255,0.06);
+    color: var(--text-3);
+  }
+  .event-pts { font-weight: 800; color: var(--accent); font-size: 0.95rem; min-width: 40px; text-align: right; }
+  .event-bar-wrap { width: 100px; }
+  .event-bar-bg { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .event-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 2px; }
+
+  /* ===================== FOOTER ===================== */
+  footer {
+    position: relative; z-index: 1;
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-3);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--border);
+  }
+  footer span { color: var(--accent); }
+
+  /* ===================== LOADING ===================== */
+  .loading-overlay {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+    transition: opacity 0.4s ease;
+  }
+  .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+  .loader {
+    display: flex; flex-direction: column; align-items: center; gap: 1.2rem;
+  }
+  .loader-ring {
+    width: 48px; height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader-text { font-size: 0.88rem; color: var(--text-3); font-weight: 600; letter-spacing: 0.06em; }
+
+  /* ===================== SCROLLBAR ===================== */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.18); }
+
+  /* ===================== RESPONSIVE ===================== */
+  @media (max-width: 768px) {
+    .hero { padding: 0 1.5rem 3rem; min-height: 42vh; }
+    .app-section { padding: 0 1rem 4rem; }
+    .card-body { padding: 1.2rem; }
+    .modal { max-width: 100%; }
+    .modal-body { padding: 1.2rem; }
+    .modal-header { padding: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loader">
+    <div class="loader-ring"></div>
+    <div class="loader-text">Loading Rankings...</div>
+  </div>
+</div>
+
+<!-- Background -->
+<div class="bg-mesh"></div>
+<div class="bg-grid"></div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-overlay"></div>
+  <div class="hero-fade"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">
+      <span class="dot"></span>
+      Official Rankings
+    </div>
+    <h1 class="hero-title">Shoto<span>Cup</span><br>Rankings</h1>
+    <p class="hero-sub">Track athlete performance, cumulative points, and event history across all Shoto Cup seasons.</p>
+  </div>
+</section>
+
+<!-- App Section -->
+<main class="app-section">
+
+  <!-- Stats Bar -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-card">
+      <div class="stat-label">Total Athletes</div>
+      <div class="stat-value accent" id="statAthletes">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Events</div>
+      <div class="stat-value blue" id="statEvents">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Seasons</div>
+      <div class="stat-value green" id="statSeasons">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Points Awarded</div>
+      <div class="stat-value" id="statPoints">—</div>
+    </div>
+  </div>
+
+  <!-- Top 5 Section -->
+  <div class="top5-section">
+    <div class="section-header">
+      <div>
+        <div class="section-eyebrow">🏆 Leaderboard</div>
+        <div class="section-title">Top 5 Athletes by Season</div>
+      </div>
+    </div>
+    <div class="year-tabs" id="yearTabs"></div>
+    <div class="podium-grid" id="podiumGrid"></div>
+  </div>
+
+  <!-- Rankings Table -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="section-eyebrow">📊 Full Rankings</div>
+        <div class="card-header-title">Athlete Rankings & Points</div>
+      </div>
+    </div>
+    <div class="card-body" style="padding-bottom:0.5rem;">
+      <div class="controls-row">
+        <div class="field">
+          <label class="field-label">Search Athlete</label>
+          <div class="input-wrap">
+            <input type="text" id="searchInput" placeholder="Type a name…">
+          </div>
+        </div>
+        <div class="field" style="max-width:200px;">
+          <label class="field-label">Filter by Season</label>
+          <select id="yearFilter">
+            <option value="">All Seasons</option>
+          </select>
+        </div>
+        <div class="field" style="max-width:200px;">
+          <label class="field-label">Filter by Event</label>
+          <select id="eventFilter">
+            <option value="">All Events</option>
+          </select>
+        </div>
+        <div style="padding-top:1.5rem;">
+          <button class="btn btn-ghost" onclick="resetFilters()">Reset</button>
+        </div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortBy('rank')" id="th-rank">Rank <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('name')" id="th-name">Athlete <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('totalPoints')" id="th-totalPoints" class="sorted">Total Pts <span class="sort-icon">↓</span></th>
+            <th onclick="sortBy('events')" id="th-events">Events <span class="sort-icon">↕</span></th>
+            <th onclick="sortBy('bestYear')" id="th-bestYear">Best Season <span class="sort-icon">↕</span></th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="rankingsBody"></tbody>
+      </table>
+      <div id="noResults" class="no-results" style="display:none;">No athletes found matching your search.</div>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+</main>
+
+<!-- Athlete Modal -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="closeModal(event)">
+  <div class="modal" id="athleteModal">
+    <div class="modal-header">
+      <div class="modal-athlete-info">
+        <div class="modal-avatar" id="modalAvatar"></div>
+        <div>
+          <div class="modal-name" id="modalName"></div>
+          <div class="modal-meta" id="modalMeta"></div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModalDirect()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-stats-grid" id="modalStatsGrid"></div>
+      <div class="chart-section">
+        <div class="chart-title">📈 Yearly Performance</div>
+        <div class="chart-container">
+          <canvas id="performanceChart"></canvas>
+        </div>
+      </div>
+      <div class="events-breakdown">
+        <div class="events-breakdown-title">🎯 Event Breakdown</div>
+        <div id="eventsBreakdown"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>Shoto Cup Rankings &mdash; Powered by <span>Shoto Cup</span> &bull; Data updated from official CSV records</p>
+</footer>
+
+<script>
+// ===================== CSV DATA =====================
+const CSV_DATA = `Athlete Name,Year,Event,Score,Created At,Updated At
+"Seri Fisher","2024-2025","2026 Shiai",40,"2026-03-16T00:48:01.239145+00:00","2026-03-16T00:48:01.239145+00:00"
+"Talia Fox","2025-2026","2026 Shiai",70,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Talaya Sousa","2025-2026","2026 Shiai",10,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Odin Flanagan","2025-2026","2026 Shiai",10,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Miguel Bolarinho","2025-2026","2026 Shiai",10,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Mia White","2025-2026","2026 Shiai",5,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Mateo Jones","2025-2026","2026 Shiai",0,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Khwai Mendoza","2025-2026","2026 Shiai",15,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Inara Todd","2025-2026","2026 Shiai",25,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Giovanni Vianello","2025-2026","2026 Shiai",50,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Dylan Flanagan","2025-2026","2026 Shiai",5,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Davonte Smith Richardson","2025-2026","2026 Shiai",10,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Dash Bailey","2025-2026","2026 Shiai",45,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Chancellor DeShield","2025-2026","2026 Shiai",0,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Chan Simons","2025-2026","2026 Shiai",25,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Arthur White","2025-2026","2026 Shiai",15,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Amarriah Vaughans","2025-2026","2026 Shiai",10,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Alessia Vianello","2025-2026","2026 Shiai",5,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Zoe Talbot","2025-2026","2026 Shiai",45,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Zecori Talbot","2025-2026","2026 Shiai",15,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Xela Hall","2025-2026","2026 Shiai",0,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Vincent Lightbourne","2025-2026","2026 Shiai",25,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Tobiah Goodchild","2025-2026","2026 Shiai",5,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Tony Cabral","2025-2026","2026 Shiai",70,"2026-03-15T23:12:14.356127+00:00","2026-03-15T23:12:14.356127+00:00"
+"Dylan Flanagan","2025-2026","Kazumi Karate Open 2025",15,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Devonte Smith Richardson","2025-2026","Kazumi Karate Open 2025",10,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Demarkio White","2025-2026","Kazumi Karate Open 2025",10,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Chan Simons","2025-2026","Kazumi Karate Open 2025",15,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Chancellor DeShield","2025-2026","Kazumi Karate Open 2025",2,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Callahj Simons","2025-2026","Kazumi Karate Open 2025",15,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Alessia Vianello","2025-2026","Kazumi Karate Open 2025",10,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Andre Izaguirre","2025-2026","Kazumi Karate Open 2025",10,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Amarriah Vaughans","2025-2026","Kazumi Karate Open 2025",45,"2025-11-24T15:41:44.944123+00:00","2025-11-24T20:32:41.450671+00:00"
+"Mia White","2025-2026","Kazumi Karate Open 2025",5,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Arthur White","2025-2026","Kazumi Karate Open 2025",2,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Zyorra Spencer","2025-2026","Kazumi Karate Open 2025",15,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Zoe Talbot","2025-2026","Kazumi Karate Open 2025",60,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Zecori Talbot","2025-2026","Kazumi Karate Open 2025",25,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Trevor Lindsay","2025-2026","Kazumi Karate Open 2025",15,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Tony Cabral","2025-2026","Kazumi Karate Open 2025",70,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Talia Fox","2025-2026","Kazumi Karate Open 2025",70,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Talaya Sousa","2025-2026","Kazumi Karate Open 2025",2,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Staciya Smith","2025-2026","Kazumi Karate Open 2025",10,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Sebastian Izaguirre","2025-2026","Kazumi Karate Open 2025",5,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Max Silva","2025-2026","Kazumi Karate Open 2025",10,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Mateo Jones","2025-2026","Kazumi Karate Open 2025",15,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Khwai Mendoza","2025-2026","Kazumi Karate Open 2025",25,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Khanan Burrows","2025-2026","Kazumi Karate Open 2025",15,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Kanae Roberts","2025-2026","Kazumi Karate Open 2025",10,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Jamarks White","2025-2026","Kazumi Karate Open 2025",10,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Jadon Spriggs","2025-2026","Kazumi Karate Open 2025",15,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Isabella Lindsay","2025-2026","Kazumi Karate Open 2025",15,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Inara Todd","2025-2026","Kazumi Karate Open 2025",15,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Giovanni Vianello","2025-2026","Kazumi Karate Open 2025",10,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Ethan White","2025-2026","Kazumi Karate Open 2025",25,"2025-11-24T15:41:44.944123+00:00","2025-11-24T15:41:44.944123+00:00"
+"Khanan Burrows","2025-2026","2025 Harto Ryu Kata Classic",10,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Arthur White","2025-2026","2025 Harto Ryu Kata Classic",2,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Talaya Sousa","2025-2026","2025 Harto Ryu Kata Classic",2,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Mateo Jones","2025-2026","2025 Harto Ryu Kata Classic",2,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Mia White","2025-2026","2025 Harto Ryu Kata Classic",5,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Sebastian Izaguirre","2025-2026","2025 Harto Ryu Kata Classic",5,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Chancellor DeShield","2025-2026","2025 Harto Ryu Kata Classic",5,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Staciya Smith","2025-2026","2025 Harto Ryu Kata Classic",10,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Max Silva","2025-2026","2025 Harto Ryu Kata Classic",10,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Kanae Roberts","2025-2026","2025 Harto Ryu Kata Classic",10,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Jadon Spriggs","2025-2026","2025 Harto Ryu Kata Classic",10,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Giovanni Vianello","2025-2026","2025 Harto Ryu Kata Classic",10,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Devonte Smith Richardson","2025-2026","2025 Harto Ryu Kata Classic",10,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Demarkio White","2025-2026","2025 Harto Ryu Kata Classic",10,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Alessia Vianello","2025-2026","2025 Harto Ryu Kata Classic",10,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Zyorra Spencer","2025-2026","2025 Harto Ryu Kata Classic",15,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Zecori Talbot","2025-2026","2025 Harto Ryu Kata Classic",15,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Trevor Lindsay","2025-2026","2025 Harto Ryu Kata Classic",15,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Jamarkis White","2025-2026","2025 Harto Ryu Kata Classic",15,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Isabella Lindsay","2025-2026","2025 Harto Ryu Kata Classic",15,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Inara Todd","2025-2026","2025 Harto Ryu Kata Classic",15,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Dylan Flanagan","2025-2026","2025 Harto Ryu Kata Classic",15,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Chan Simons","2025-2026","2025 Harto Ryu Kata Classic",15,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Callahj Simons","2025-2026","2025 Harto Ryu Kata Classic",15,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Andre Izaguirre","2025-2026","2025 Harto Ryu Kata Classic",15,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Khwai Mendoza","2025-2026","2025 Harto Ryu Kata Classic",25,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Ethan White","2025-2026","2025 Harto Ryu Kata Classic",25,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Amarriah Vaughans","2025-2026","2025 Harto Ryu Kata Classic",45,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Zoe Talbot","2025-2026","2025 Harto Ryu Kata Classic",45,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Tony Cabral","2025-2026","2025 Harto Ryu Kata Classic",70,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Talia Fox","2025-2026","2025 Harto Ryu Kata Classic",70,"2025-09-28T19:32:27.566709+00:00","2025-09-28T19:32:27.566709+00:00"
+"Zyorra Spencer","2024-2025","2024 Kata Classic",15,"2025-08-31T02:33:09.270233+00:00","2025-08-31T02:33:09.270233+00:00"
+"Zoe Talbot","2024-2025","2025 Lepercq Memorial",15,"2025-08-31T02:33:09.088247+00:00","2025-08-31T02:33:09.088247+00:00"
+"Zoe Talbot","2024-2025","2025 Shiai",15,"2025-08-31T02:33:08.959461+00:00","2025-08-31T02:33:08.959461+00:00"
+"Zoe Talbot","2024-2025","2024 Kazumi open",15,"2025-08-31T02:33:08.849372+00:00","2025-08-31T02:33:08.849372+00:00"
+"Zoe Talbot","2024-2025","2024 Kata Classic",15,"2025-08-31T02:33:08.740826+00:00","2025-08-31T02:33:08.740826+00:00"
+"Zhara Trott","2024-2025","2024 Kazumi open",10,"2025-08-31T02:33:08.445579+00:00","2025-08-31T02:33:08.445579+00:00"
+"Zecori Talbot","2024-2025","2025 Lepercq Memorial",15,"2025-08-31T02:33:08.246802+00:00","2025-08-31T02:33:08.246802+00:00"
+"Zecori Talbot","2024-2025","2024 Kazumi open",15,"2025-08-31T02:33:08.152931+00:00","2025-08-31T02:33:08.152931+00:00"
+"Zecori Talbot","2024-2025","2024 Kata Classic",10,"2025-08-31T02:33:08.053242+00:00","2025-08-31T02:33:08.053242+00:00"
+"XYAIDEN BURROWS","2024-2025","2024 Kazumi open",10,"2025-08-31T02:33:07.757475+00:00","2025-08-31T02:33:07.757475+00:00"
+"Xela Hall","2024-2025","2024 Kazumi open",5,"2025-08-31T02:33:07.547283+00:00","2025-08-31T02:33:07.547283+00:00"
+"Will Spriggs","2024-2025","2024 Kata Classic",25,"2025-08-31T02:33:07.249167+00:00","2025-08-31T02:33:07.249167+00:00"
+"Vincent Lightbourne","2024-2025","2025 Lepercq Memorial",12,"2025-08-31T02:33:06.937852+00:00","2025-08-31T02:33:06.937852+00:00"
+"Vincent Lightbourne","2024-2025","2025 Shiai",15,"2025-08-31T02:33:06.838576+00:00","2025-08-31T02:33:06.838576+00:00"
+"Vincent Lightbourne","2024-2025","2024 Kazumi open",25,"2025-08-31T02:33:06.738174+00:00","2025-08-31T02:33:06.738174+00:00"
+"Vincent Lightbourne","2024-2025","2024 Kata Classic",15,"2025-08-31T02:33:06.632359+00:00","2025-08-31T02:33:06.632359+00:00"
+"Tre' Simmons","2024-2025","2024 Kazumi open",15,"2025-08-31T02:33:06.353161+00:00","2025-08-31T02:33:06.353161+00:00"
+"Tony Cabral","2024-2025","2025 Lepercq Memorial",55,"2025-08-31T02:33:06.150366+00:00","2025-08-31T02:33:06.150366+00:00"
+"Tony Cabral","2024-2025","2025 Shiai",60,"2025-08-31T02:33:06.056799+00:00","2025-08-31T02:33:06.056799+00:00"
+"Tony Cabral","2024-2025","2024 Kazumi open",75,"2025-08-31T02:33:05.950506+00:00","2025-08-31T02:33:05.950506+00:00"
+"Tony Cabral","2024-2025","2024 Kata Classic",40,"2025-08-31T02:33:05.847115+00:00","2025-08-31T02:33:05.847115+00:00"
+"Tobiah Goodchild","2024-2025","2025 Lepercq Memorial",10,"2025-08-31T02:33:05.548173+00:00","2025-08-31T02:33:05.548173+00:00"
+"Tobiah Goodchild","2024-2025","2024 Kazumi open",30,"2025-08-31T02:33:05.446466+00:00","2025-08-31T02:33:05.446466+00:00"
+"Tobiah Goodchild","2024-2025","2024 Kata Classic",30,"2025-08-31T02:33:05.343475+00:00","2025-08-31T02:33:05.343475+00:00"
+"Talia Fox","2024-2025","2025 Lepercq Memorial",55,"2025-08-31T02:33:05.066416+00:00","2025-08-31T02:33:05.066416+00:00"
+"Talia Fox","2024-2025","2025 Shiai",70,"2025-08-31T02:33:04.966043+00:00","2025-08-31T02:33:04.966043+00:00"
+"Talia Fox","2024-2025","2024 Kazumi open",35,"2025-08-31T02:33:04.862247+00:00","2025-08-31T02:33:04.862247+00:00"
+"Talia Fox","2024-2025","2024 Kata Classic",60,"2025-08-31T02:33:04.766537+00:00","2025-08-31T02:33:04.766537+00:00"
+"Talaya Sousa","2024-2025","2025 Shiai",5,"2025-08-31T02:33:04.530569+00:00","2025-08-31T02:33:04.530569+00:00"
+"Talaya Sousa","2024-2025","2024 Kazumi open",2,"2025-08-31T02:33:04.413437+00:00","2025-08-31T02:33:04.413437+00:00"
+"Talaya Sousa","2024-2025","2024 Kata Classic",15,"2025-08-31T02:33:04.315762+00:00","2025-08-31T02:33:04.315762+00:00"
+"Talano Brown","2024-2025","2024 Kata Classic",15,"2025-08-31T02:33:04.00296+00:00","2025-08-31T02:33:04.00296+00:00"
+"Staciya Smith","2024-2025","2024 Kazumi open",10,"2025-08-31T02:33:03.719488+00:00","2025-08-31T02:33:03.719488+00:00"
+"Staciya Smith","2024-2025","2024 Kata Classic",10,"2025-08-31T02:33:03.617564+00:00","2025-08-31T02:33:03.617564+00:00"
+"Rhiann Brown","2024-2025","2024 Kata Classic",10,"2025-08-31T02:33:03.298756+00:00","2025-08-31T02:33:03.298756+00:00"
+"Odin Flanagan","2024-2025","2025 Lepercq Memorial",10,"2025-08-31T02:33:02.997163+00:00","2025-08-31T02:33:02.997163+00:00"
+"Odin Flanagan","2024-2025","2025 Shiai",5,"2025-08-31T02:33:02.893434+00:00","2025-08-31T02:33:02.893434+00:00"
+"Odin Flanagan","2024-2025","2024 Kazumi open",5,"2025-08-31T02:33:02.798014+00:00","2025-08-31T02:33:02.798014+00:00"
+"Noah Lowe","2024-2025","2025 Shiai",10,"2025-08-31T02:33:02.506176+00:00","2025-08-31T02:33:02.506176+00:00"
+"Nasii Gibbons","2024-2025","2024 Kazumi open",2,"2025-08-31T02:33:02.165453+00:00","2025-08-31T02:33:02.165453+00:00"
+"Miguel Bolerihno","2024-2025","2024 Kazumi open",10,"2025-08-31T02:33:01.930746+00:00","2025-08-31T02:33:01.930746+00:00"
+"Miguel Bolerihno","2024-2025","2024 Kata Classic",10,"2025-08-31T02:33:01.82626+00:00","2025-08-31T02:33:01.82626+00:00"
+"Michael Burgess","2024-2025","2025 Lepercq Memorial",20,"2025-08-31T02:33:01.615088+00:00","2025-08-31T02:33:01.615088+00:00"
+"Michael Burgess","2024-2025","2025 Shiai",30,"2025-08-31T02:33:01.513607+00:00","2025-08-31T02:33:01.513607+00:00"
+"Michael Burgess","2024-2025","2024 Kazumi open",35,"2025-08-31T02:33:01.400163+00:00","2025-08-31T02:33:01.400163+00:00"
+"Michael Burgess","2024-2025","2024 Kata Classic",25,"2025-08-31T02:33:01.300647+00:00","2025-08-31T02:33:01.300647+00:00"
+"Micah Lawrence","2024-2025","2025 Shiai",15,"2025-08-31T02:33:00.990334+00:00","2025-08-31T02:33:00.990334+00:00"
+"Mia White","2024-2025","2025 Lepercq Memorial",15,"2025-08-31T02:33:00.786031+00:00","2025-10-01T02:50:35.883172+00:00"
+"Mia White","2024-2025","2024 Kazumi open",25,"2025-08-31T02:33:00.645979+00:00","2025-10-01T02:50:35.801808+00:00"
+"Mia White","2024-2025","2024 Kata Classic",15,"2025-08-31T02:33:00.527398+00:00","2025-10-01T02:50:35.717501+00:00"
+"Maiya Caisey","2024-2025","2024 Kazumi open",5,"2025-08-31T02:33:00.217106+00:00","2025-08-31T02:33:00.217106+00:00"
+"Khwai Mendoza","2024-2025","2025 Lepercq Memorial",15,"2025-08-31T02:32:59.933642+00:00","2025-08-31T02:32:59.933642+00:00"
+"Khwai Mendoza","2024-2025","2025 Shiai",10,"2025-08-31T02:32:59.827176+00:00","2025-08-31T02:32:59.827176+00:00"
+"Khwai Mendoza","2024-2025","2024 Kazumi open",25,"2025-08-31T02:32:59.731052+00:00","2025-08-31T02:32:59.731052+00:00"
+"Kamila Simons","2024-2025","2024 Kazumi open",10,"2025-08-31T02:32:59.393699+00:00","2025-08-31T02:32:59.393699+00:00"
+"Joah Simons","2024-2025","2024 Kazumi open",5,"2025-08-31T02:32:59.106512+00:00","2025-08-31T02:32:59.106512+00:00"
+"Jayden Lambert","2024-2025","2024 Kazumi open",5,"2025-08-31T02:32:58.799115+00:00","2025-08-31T02:32:58.799115+00:00"
+"Jayden Lambert","2024-2025","2024 Kata Classic",15,"2025-08-31T02:32:58.709217+00:00","2025-08-31T02:32:58.709217+00:00"
+"James Lema","2024-2025","2025 Shiai",15,"2025-08-31T02:32:58.41085+00:00","2025-08-31T02:32:58.41085+00:00"
+"Jadon Spriggs","2024-2025","2024 Kata Classic",25,"2025-08-31T02:32:58.211303+00:00","2025-08-31T02:32:58.211303+00:00"
+"Jacob Cabrera","2024-2025","2025 Shiai",5,"2025-08-31T02:32:57.864801+00:00","2025-08-31T02:32:57.864801+00:00"
+"Inara Todd","2024-2025","2025 Lepercq Memorial",15,"2025-08-31T02:32:57.656496+00:00","2025-08-31T02:32:57.656496+00:00"
+"Inara Todd","2024-2025","2025 Shiai",15,"2025-08-31T02:32:57.567822+00:00","2025-08-31T02:32:57.567822+00:00"
+"Inara Todd","2024-2025","2024 Kazumi open",15,"2025-08-31T02:32:57.453141+00:00","2025-08-31T02:32:57.453141+00:00"
+"Giovanni Vianello","2024-2025","2025 Lepercq Memorial",25,"2025-08-31T02:32:57.168332+00:00","2025-08-31T02:32:57.168332+00:00"
+"Giovanni Vianello","2024-2025","2025 Shiai",5,"2025-08-31T02:32:57.074783+00:00","2025-08-31T02:32:57.074783+00:00"
+"Giovanni Vianello","2024-2025","2024 Kata Classic",10,"2025-08-31T02:32:56.979735+00:00","2025-08-31T02:32:56.979735+00:00"
+"Gavin Cabrera","2024-2025","2025 Shiai",10,"2025-08-31T02:32:56.685484+00:00","2025-08-31T02:32:56.685484+00:00"
+"Ethan White","2024-2025","2025 Lepercq Memorial",20,"2025-08-31T02:32:56.483033+00:00","2025-08-31T02:32:56.483033+00:00"
+"Ethan White","2024-2025","2024 Kazumi open",30,"2025-08-31T02:32:56.37856+00:00","2025-08-31T02:32:56.37856+00:00"
+"Ethan White","2024-2025","2024 Kata Classic",15,"2025-08-31T02:32:56.277241+00:00","2025-08-31T02:32:56.277241+00:00"
+"Dylan Flanagan","2024-2025","2025 Lepercq Memorial",2,"2025-08-31T02:32:55.972379+00:00","2025-08-31T02:32:55.972379+00:00"
+"Dylan Flanagan","2024-2025","2024 Kazumi open",10,"2025-08-31T02:32:55.866799+00:00","2025-08-31T02:32:55.866799+00:00"
+"Davonte Smith Richardson","2024-2025","2025 Lepercq Memorial",15,"2025-08-31T02:32:55.562891+00:00","2025-08-31T02:32:55.562891+00:00"
+"Davonte Smith Richardson","2024-2025","2025 Shiai",10,"2025-08-31T02:32:55.439639+00:00","2025-08-31T02:32:55.439639+00:00"
+"Dash Bailey","2024-2025","2025 Lepercq Memorial",10,"2025-08-31T02:32:55.257349+00:00","2025-08-31T02:32:55.257349+00:00"
+"Dash Bailey","2024-2025","2025 Shiai",15,"2025-08-31T02:32:55.171708+00:00","2025-08-31T02:32:55.171708+00:00"
+"Dantè Hansey","2024-2025","2024 Kata Classic",15,"2025-08-31T02:32:54.880869+00:00","2025-08-31T02:32:54.880869+00:00"
+"Conor Ferguson","2024-2025","2025 Shiai",10,"2025-08-31T02:32:54.688951+00:00","2025-08-31T02:32:54.688951+00:00"
+"Clark Sta. Maria","2024-2025","2025 Shiai",10,"2025-08-31T02:32:54.496669+00:00","2025-08-31T02:32:54.496669+00:00"
+"Chelsea Sta. Maria","2024-2025","2025 Shiai",10,"2025-08-31T02:32:54.314733+00:00","2025-08-31T02:32:54.314733+00:00"
+"Charles Ndaye","2024-2025","2024 Kazumi open",10,"2025-08-31T02:32:54.123948+00:00","2025-08-31T02:32:54.123948+00:00"
+"Charles Ndaye","2024-2025","2024 Kata Classic",10,"2025-08-31T02:32:54.027631+00:00","2025-08-31T02:32:54.027631+00:00"
+"Chancellor DeShield","2024-2025","2025 Lepercq Memorial",25,"2025-08-31T02:32:53.829654+00:00","2025-08-31T02:32:53.829654+00:00"
+"Chancellor DeShield","2024-2025","2025 Shiai",10,"2025-08-31T02:32:53.717735+00:00","2025-08-31T02:32:53.717735+00:00"
+"Chancellor DeShield","2024-2025","2024 Kata Classic",5,"2025-08-31T02:32:53.618449+00:00","2025-08-31T02:32:53.618449+00:00"
+"Chan Simons","2024-2025","2025 Lepercq Memorial",25,"2025-08-31T02:32:53.323978+00:00","2025-08-31T02:32:53.323978+00:00"
+"Chan Simons","2024-2025","2025 Shiai",15,"2025-08-31T02:32:53.220656+00:00","2025-08-31T02:32:53.220656+00:00"
+"Chan Simons","2024-2025","2024 Kazumi open",25,"2025-08-31T02:32:53.115519+00:00","2025-08-31T02:32:53.115519+00:00"
+"Chan Simons","2024-2025","2024 Kata Classic",5,"2025-08-31T02:32:53.022762+00:00","2025-08-31T02:32:53.022762+00:00"
+"Blake Farrington","2024-2025","2024 Kazumi open",10,"2025-08-31T02:32:52.716743+00:00","2025-08-31T02:32:52.716743+00:00"
+"Ava Simons","2024-2025","2025 Shiai",15,"2025-08-31T02:32:52.410209+00:00","2025-08-31T02:32:52.410209+00:00"
+"Ava Simons","2024-2025","2024 Kazumi open",15,"2025-08-31T02:32:52.304798+00:00","2025-08-31T02:32:52.304798+00:00"
+"Arlo Holis","2024-2025","2025 Lepercq Memorial",17,"2025-08-31T02:32:52.107644+00:00","2025-08-31T02:32:52.107644+00:00"
+"Arlo Holis","2024-2025","2024 Kazumi open",25,"2025-08-31T02:32:52.022251+00:00","2025-08-31T02:32:52.022251+00:00"
+"Amarriah Vaughans","2024-2025","2025 Lepercq Memorial",15,"2025-08-31T02:32:51.840406+00:00","2025-08-31T02:32:51.840406+00:00"
+"Amarriah Vaughans","2024-2025","2025 Shiai",15,"2025-08-31T02:32:51.733508+00:00","2025-08-31T02:32:51.733508+00:00"
+"Amarriah Vaughans","2024-2025","2024 Kazumi open",15,"2025-08-31T02:32:51.630296+00:00","2025-08-31T02:32:51.630296+00:00"
+"Alessia Vianello","2024-2025","2025 Lepercq Memorial",10,"2025-08-31T02:32:51.33467+00:00","2025-08-31T02:32:51.33467+00:00"
+"Alessia Vianello","2024-2025","2025 Shiai",10,"2025-08-31T02:32:51.230372+00:00","2025-08-31T02:32:51.230372+00:00"
+"Alessia Vianello","2024-2025","2024 Kata Classic",5,"2025-08-31T02:32:51.130761+00:00","2025-08-31T02:32:51.130761+00:00"
+"Jake Arnold","2023-2024","2024 Lepercq Memorial",5,"2025-08-31T02:32:50.243978+00:00","2025-08-31T02:32:50.243978+00:00"
+"kez simmons","2023-2024","2024 Lepercq Memorial",10,"2025-08-31T02:32:50.049654+00:00","2025-08-31T02:32:50.049654+00:00"
+"Chancellor DeShield","2023-2024","2024 Lepercq Memorial",10,"2025-08-31T02:32:49.855145+00:00","2025-08-31T02:32:49.855145+00:00"
+"Tobiah Goodchild","2023-2024","2024 Shiai",10,"2025-08-31T02:32:49.656464+00:00","2025-08-31T02:32:49.656464+00:00"
+"Jaze Anderson","2023-2024","2024 Shiai",10,"2025-08-31T02:32:49.455598+00:00","2025-08-31T02:32:49.455598+00:00"
+"Avalon Hollis","2023-2024","2024 Lepercq Memorial",20,"2025-08-31T02:32:49.255996+00:00","2025-08-31T02:32:49.255996+00:00"
+"Avalon Hollis","2023-2024","2024 Shiai",5,"2025-08-31T02:32:49.152783+00:00","2025-08-31T02:32:49.152783+00:00"
+"Ja'Quito Young","2023-2024","2024 Shiai",15,"2025-08-31T02:32:48.951504+00:00","2025-08-31T02:32:48.951504+00:00"
+"Blake Farrington","2023-2024","2024 Lepercq Memorial",10,"2025-08-31T02:32:48.738462+00:00","2025-08-31T02:32:48.738462+00:00"
+"Blake Farrington","2023-2024","2024 Shiai",10,"2025-08-31T02:32:48.647671+00:00","2025-08-31T02:32:48.647671+00:00"
+"TaylorMing","2023-2024","2024 Lepercq Memorial",15,"2025-08-31T02:32:48.464596+00:00","2025-08-31T02:32:48.464596+00:00"
+"TaylorMing","2023-2024","2024 Shiai",15,"2025-08-31T02:32:48.374317+00:00","2025-08-31T02:32:48.374317+00:00"
+"Khanan Burrows","2023-2024","2024 Shiai",15,"2025-08-31T02:32:48.163792+00:00","2025-08-31T02:32:48.163792+00:00"
+"Jadon Spriggs","2023-2024","2024 Shiai",15,"2025-08-31T02:32:47.965017+00:00","2025-08-31T02:32:47.965017+00:00"
+"Jayden Lambert","2023-2024","2024 Shiai",25,"2025-08-31T02:32:47.764227+00:00","2025-08-31T02:32:47.764227+00:00"
+"Tre Simmons","2023-2024","2024 Shiai",25,"2025-08-31T02:32:47.569608+00:00","2025-08-31T02:32:47.569608+00:00"
+"Jaishun Jones","2023-2024","2024 Shiai",15,"2025-08-31T02:32:47.36453+00:00","2025-08-31T02:32:47.36453+00:00"
+"Odin Flanagan","2023-2024","2023 Kazumi open",5,"2025-08-31T02:32:47.16262+00:00","2025-08-31T02:32:47.16262+00:00"
+"Zion Lowe","2023-2024","2024 Lepercq Memorial",15,"2025-08-31T02:32:46.890161+00:00","2025-08-31T02:32:46.890161+00:00"
+"Zion Lowe","2023-2024","2023 Kazumi open",2,"2025-08-31T02:32:46.804578+00:00","2025-08-31T02:32:46.804578+00:00"
+"Zhara  Trott","2023-2024","2023 Kazumi open",15,"2025-08-31T02:32:46.602784+00:00","2025-08-31T02:32:46.602784+00:00"
+"Y'Ves  Tucker","2023-2024","2023 Kazumi open",5,"2025-08-31T02:32:46.40314+00:00","2025-08-31T02:32:46.40314+00:00"
+"Xyaiden  Burrows","2023-2024","2024 Shiai",2,"2025-08-31T02:32:46.201698+00:00","2025-08-31T02:32:46.201698+00:00"
+"Xyaiden  Burrows","2023-2024","2023 Kazumi open",5,"2025-08-31T02:32:46.10938+00:00","2025-08-31T02:32:46.10938+00:00"
+"Xela Hall","2023-2024","2023 Kazumi open",10,"2025-08-31T02:32:45.889108+00:00","2025-08-31T02:32:45.889108+00:00"
+"Will Spriggs","2023-2024","2023 Kazumi open",15,"2025-08-31T02:32:45.693783+00:00","2025-08-31T02:32:45.693783+00:00"
+"Michael Mohipp","2023-2024","2023 Kazumi open",10,"2025-08-31T02:32:45.49367+00:00","2025-08-31T02:32:45.49367+00:00"
+"Khwai Mendoza","2023-2024","2024 Lepercq Memorial",10,"2025-08-31T02:32:45.298027+00:00","2025-08-31T02:32:45.298027+00:00"
+"Khwai Mendoza","2023-2024","2024 Shiai",25,"2025-08-31T02:32:45.189511+00:00","2025-08-31T02:32:45.189511+00:00"
+"Khwai Mendoza","2023-2024","2023 Kazumi open",22,"2025-08-31T02:32:45.094522+00:00","2025-08-31T02:32:45.094522+00:00"
+"Kamila Simons","2023-2024","2023 Kazumi open",10,"2025-08-31T02:32:44.875634+00:00","2025-08-31T02:32:44.875634+00:00"
+"Isla Hall","2023-2024","2023 Kazumi open",15,"2025-08-31T02:32:44.662485+00:00","2025-08-31T02:32:44.662485+00:00"
+"Dash Bailey","2023-2024","2023 Kazumi open",15,"2025-08-31T02:32:44.465738+00:00","2025-08-31T02:32:44.465738+00:00"
+"Charle Ndiaye","2023-2024","2023 Kazumi open",10,"2025-08-31T02:32:44.148239+00:00","2025-08-31T02:32:44.148239+00:00"
+"Bergen Branden","2023-2024","2023 Kazumi open",5,"2025-08-31T02:32:43.94166+00:00","2025-08-31T02:32:43.94166+00:00"
+"Taylor Ming","2023-2024","2023 Kata Classic",15,"2025-08-31T02:32:43.728766+00:00","2025-08-31T02:32:43.728766+00:00"
+"Tony Cabral","2023-2024","2024 Lepercq Memorial",75,"2025-08-31T02:32:43.4203+00:00","2025-11-20T20:52:29.88835+00:00"
+"Tony Cabral","2023-2024","2024 Shiai",70,"2025-08-31T02:32:43.326627+00:00","2025-11-20T20:52:29.88835+00:00"
+"Tony Cabral","2023-2024","2023 Kazumi open",90,"2025-08-31T02:32:43.22232+00:00","2025-11-20T20:52:29.88835+00:00"
+"Tony Cabral","2023-2024","2023 Kata Classic",50,"2025-08-31T02:32:43.110545+00:00","2025-11-20T20:52:29.88835+00:00"
+"Zoe Talbot","2023-2024","2024 Lepercq Memorial",10,"2025-08-31T02:32:42.910145+00:00","2025-08-31T02:32:42.910145+00:00"
+"Zoe Talbot","2023-2024","2024 Shiai",15,"2025-08-31T02:32:42.812593+00:00","2025-08-31T02:32:42.812593+00:00"
+"Zoe Talbot","2023-2024","2023 Kata Classic",5,"2025-08-31T02:32:42.71471+00:00","2025-08-31T02:32:42.71471+00:00"
+"Zoe Phillips","2023-2024","2024 Lepercq Memorial",15,"2025-08-31T02:32:42.403256+00:00","2025-08-31T02:32:42.403256+00:00"
+"Zoe Phillips","2023-2024","2024 Shiai",10,"2025-08-31T02:32:42.31258+00:00","2025-08-31T02:32:42.31258+00:00"
+"Zoe Phillips","2023-2024","2023 Kazumi open",15,"2025-08-31T02:32:42.213485+00:00","2025-08-31T02:32:42.213485+00:00"
+"Zoe Phillips","2023-2024","2023 Kata Classic",15,"2025-08-31T02:32:42.121176+00:00","2025-08-31T02:32:42.121176+00:00"
+"Zecori Talbot","2023-2024","2024 Lepercq Memorial",15,"2025-08-31T02:32:41.768447+00:00","2025-08-31T02:32:41.768447+00:00"
+"Zecori Talbot","2023-2024","2024 Shiai",10,"2025-08-31T02:32:41.600383+00:00","2025-08-31T02:32:41.600383+00:00"
+"Zecori Talbot","2023-2024","2023 Kata Classic",15,"2025-08-31T02:32:41.419475+00:00","2025-08-31T02:32:41.419475+00:00"
+"Vincent Lightbourne","2023-2024","2024 Shiai",5,"2025-08-31T02:32:41.065393+00:00","2025-08-31T02:32:41.065393+00:00"
+"Vincent Lightbourne","2023-2024","2023 Kazumi open",15,"2025-08-31T02:32:40.892466+00:00","2025-08-31T02:32:40.892466+00:00"
+"Vincent Lightbourne","2023-2024","2023 Kata Classic",15,"2025-08-31T02:32:40.711899+00:00","2025-08-31T02:32:40.711899+00:00"
+"Tanaka Kunze","2023-2024","2023 Kazumi open",15,"2025-08-31T02:32:40.361385+00:00","2025-08-31T02:32:40.361385+00:00"
+"Tanaka Kunze","2023-2024","2023 Kata Classic",5,"2025-08-31T02:32:40.187305+00:00","2025-08-31T02:32:40.187305+00:00"
+"Talaya Sousa","2023-2024","2024 Lepercq Memorial",15,"2025-08-31T02:32:39.841591+00:00","2025-08-31T02:32:39.841591+00:00"
+"Talaya Sousa","2023-2024","2023 Kata Classic",2,"2025-08-31T02:32:39.650466+00:00","2025-08-31T02:32:39.650466+00:00"
+"Talano Brown","2023-2024","2023 Kata Classic",10,"2025-08-31T02:32:38.993333+00:00","2025-08-31T02:32:38.993333+00:00"
+"Talia Fox","2023-2024","2024 Lepercq Memorial",35,"2025-08-31T02:32:38.786316+00:00","2025-11-20T20:45:18.348757+00:00"
+"Talia Fox","2023-2024","2024 Shiai",70,"2025-08-31T02:32:38.679619+00:00","2025-11-20T20:45:18.348757+00:00"
+"Talia Fox","2023-2024","2023 Kazumi open",50,"2025-08-31T02:32:38.580457+00:00","2025-11-20T20:45:18.348757+00:00"
+"Talia Fox","2023-2024","2023 Kata Classic",90,"2025-08-31T02:32:38.493017+00:00","2025-11-20T20:45:18.348757+00:00"
+"Rochuno Richards","2023-2024","2024 Lepercq Memorial",15,"2025-08-31T02:32:38.181108+00:00","2025-08-31T02:32:38.181108+00:00"
+"Rochuno Richards","2023-2024","2024 Shiai",2,"2025-08-31T02:32:38.086971+00:00","2025-08-31T02:32:38.086971+00:00"
+"Rochuno Richards","2023-2024","2023 Kazumi open",5,"2025-08-31T02:32:37.988157+00:00","2025-08-31T02:32:37.988157+00:00"
+"Rochuno Richards","2023-2024","2023 Kata Classic",10,"2025-08-31T02:32:37.870803+00:00","2025-08-31T02:32:37.870803+00:00"
+"Rhiann Brown","2023-2024","2023 Kata Classic",2,"2025-08-31T02:32:37.668453+00:00","2025-08-31T02:32:37.668453+00:00"
+"Noah Lowe","2023-2024","2024 Lepercq Memorial",20,"2025-08-31T02:32:37.473354+00:00","2025-08-31T02:32:37.473354+00:00"
+"Noah Lowe","2023-2024","2024 Shiai",25,"2025-08-31T02:32:37.368423+00:00","2025-08-31T02:32:37.368423+00:00"
+"Noah Lowe","2023-2024","2023 Kazumi open",15,"2025-08-31T02:32:37.260819+00:00","2025-08-31T02:32:37.260819+00:00"
+"Noah Lowe","2023-2024","2023 Kata Classic",15,"2025-08-31T02:32:37.159545+00:00","2025-08-31T02:32:37.159545+00:00"
+"Miguel Bolarinho","2023-2024","2024 Shiai",2,"2025-08-31T02:32:36.818605+00:00","2025-08-31T02:32:36.818605+00:00"
+"Miguel Bolarinho","2023-2024","2023 Kata Classic",10,"2025-08-31T02:32:36.724155+00:00","2025-08-31T02:32:36.724155+00:00"
+"Michael Burgess","2023-2024","2024 Lepercq Memorial",45,"2025-08-31T02:32:36.545282+00:00","2025-08-31T02:32:36.545282+00:00"
+"Michael Burgess","2023-2024","2024 Shiai",45,"2025-08-31T02:32:36.441034+00:00","2025-08-31T02:32:36.441034+00:00"
+"Michael Burgess","2023-2024","2023 Kazumi open",45,"2025-08-31T02:32:36.337449+00:00","2025-08-31T02:32:36.337449+00:00"
+"Michael Burgess","2023-2024","2023 Kata Classic",30,"2025-08-31T02:32:36.239913+00:00","2025-08-31T02:32:36.239913+00:00"
+"Mia White","2023-2024","2024 Lepercq Memorial",5,"2025-08-31T02:32:35.959731+00:00","2025-08-31T02:32:35.959731+00:00"
+"Mia White","2023-2024","2024 Shiai",15,"2025-08-31T02:32:35.861751+00:00","2025-08-31T02:32:35.861751+00:00"
+"Mia White","2023-2024","2023 Kata Classic",15,"2025-08-31T02:32:35.767419+00:00","2025-08-31T02:32:35.767419+00:00"
+"Marlieh Williams","2023-2024","2023 Kata Classic",30,"2025-08-31T02:32:35.418109+00:00","2025-08-31T02:32:35.418109+00:00"
+"Maiya Caisey","2023-2024","2024 Lepercq Memorial",5,"2025-08-31T02:32:35.058766+00:00","2025-08-31T02:32:35.058766+00:00"
+"Maiya Caisey","2023-2024","2023 Kata Classic",5,"2025-08-31T02:32:34.89229+00:00","2025-08-31T02:32:34.89229+00:00"
+"Kairos Francis","2023-2024","2023 Kata Classic",5,"2025-08-31T02:32:34.376667+00:00","2025-08-31T02:32:34.376667+00:00"
+"Inara Todd","2023-2024","2023 Kata Classic",10,"2025-08-31T02:32:34.011774+00:00","2025-08-31T02:32:34.011774+00:00"
+"Giovanni Vianello","2023-2024","2024 Lepercq Memorial",5,"2025-08-31T02:32:33.670164+00:00","2025-08-31T02:32:33.670164+00:00"
+"Giovanni Vianello","2023-2024","2024 Shiai",10,"2025-08-31T02:32:33.492821+00:00","2025-08-31T02:32:33.492821+00:00"
+"Giovanni Vianello","2023-2024","2023 Kazumi open",10,"2025-08-31T02:32:33.301951+00:00","2025-08-31T02:32:33.301951+00:00"
+"Giovanni Vianello","2023-2024","2023 Kata Classic",15,"2025-08-31T02:32:33.099673+00:00","2025-08-31T02:32:33.099673+00:00"
+"Ethan White","2023-2024","2024 Lepercq Memorial",15,"2025-08-31T02:32:32.592683+00:00","2025-08-31T02:32:32.592683+00:00"
+"Ethan White","2023-2024","2024 Shiai",5,"2025-08-31T02:32:32.484324+00:00","2025-08-31T02:32:32.484324+00:00"
+"Ethan White","2023-2024","2023 Kata Classic",5,"2025-08-31T02:32:32.383962+00:00","2025-08-31T02:32:32.383962+00:00"
+"Dominique Brown","2023-2024","2024 Shiai",25,"2025-08-31T02:32:32.194888+00:00","2025-08-31T02:32:32.194888+00:00"
+"Dominique Brown","2023-2024","2023 Kata Classic",35,"2025-08-31T02:32:32.111404+00:00","2025-08-31T02:32:32.111404+00:00"
+"Chan Simons","2023-2024","2024 Lepercq Memorial",17,"2025-08-31T02:32:31.832615+00:00","2025-08-31T02:32:31.832615+00:00"
+"Chan Simons","2023-2024","2024 Shiai",25,"2025-08-31T02:32:31.737394+00:00","2025-08-31T02:32:31.737394+00:00"
+"Chan Simons","2023-2024","2023 Kata Classic",10,"2025-08-31T02:32:31.647689+00:00","2025-08-31T02:32:31.647689+00:00"
+"Beth Hollis","2023-2024","2023 Kata Classic",15,"2025-08-31T02:32:31.342429+00:00","2025-08-31T02:32:31.342429+00:00"
+"Arlo Hollis","2023-2024","2024 Lepercq Memorial",25,"2025-08-31T02:32:31.156008+00:00","2025-08-31T02:32:31.156008+00:00"
+"Arlo Hollis","2023-2024","2024 Shiai",5,"2025-08-31T02:32:30.984602+00:00","2025-08-31T02:32:30.984602+00:00"
+"Arlo Hollis","2023-2024","2023 Kazumi open",15,"2025-08-31T02:32:30.886493+00:00","2025-08-31T02:32:30.886493+00:00"
+"Arlo Hollis","2023-2024","2023 Kata Classic",15,"2025-08-31T02:32:30.780613+00:00","2025-08-31T02:32:30.780613+00:00"
+"Amarriah Vaughans","2023-2024","2024 Lepercq Memorial",25,"2025-08-31T02:32:30.580204+00:00","2025-08-31T02:32:30.580204+00:00"
+"Amarriah Vaughans","2023-2024","2024 Shiai",30,"2025-08-31T02:32:30.480176+00:00","2025-08-31T02:32:30.480176+00:00"
+"Amarriah Vaughans","2023-2024","2023 Kazumi open",15,"2025-08-31T02:32:30.376518+00:00","2025-08-31T02:32:30.376518+00:00"
+"Amarriah Vaughans","2023-2024","2023 Kata Classic",20,"2025-08-31T02:32:30.273778+00:00","2025-08-31T02:32:30.273778+00:00"
+"AlessiaVianello","2023-2024","2024 Shiai",10,"2025-08-31T02:32:29.89078+00:00","2025-08-31T02:32:29.89078+00:00"
+"AlessiaVianello","2023-2024","2023 Kazumi open",10,"2025-08-31T02:32:29.739064+00:00","2025-08-31T02:32:29.739064+00:00"
+"AlessiaVianello","2023-2024","2023 Kata Classic",15,"2025-08-31T02:32:29.62817+00:00","2025-08-31T02:32:29.62817+00:00"
+"Zoe Talbot","2021-2022","2022 Lepercq Memorial",10,"2025-08-31T02:32:28.912376+00:00","2025-08-31T02:32:28.912376+00:00"
+"Zacori Talbot","2021-2022","2022 Lepercq Memorial",15,"2025-08-31T02:32:28.677454+00:00","2025-08-31T02:32:28.677454+00:00"
+"Torrie Russell","2021-2022","2022 Lepercq Memorial",15,"2025-08-31T02:32:28.473886+00:00","2025-08-31T02:32:28.473886+00:00"
+"Torrie Russell","2021-2022","2022 Shiai",5,"2025-08-31T02:32:28.375595+00:00","2025-08-31T02:32:28.375595+00:00"
+"Taylor Ming","2021-2022","2022 Lepercq Memorial",15,"2025-08-31T02:32:28.174888+00:00","2025-08-31T02:32:28.174888+00:00"
+"Talano Brown Brown","2021-2022","2022 Lepercq Memorial",5,"2025-08-31T02:32:27.943786+00:00","2025-08-31T02:32:27.943786+00:00"
+"Staciya Smith","2021-2022","2022 Lepercq Memorial",5,"2025-08-31T02:32:27.725145+00:00","2025-08-31T02:32:27.725145+00:00"
+"Rocco Adderley","2021-2022","2021 BudoCup",5,"2025-08-31T02:32:27.498206+00:00","2025-08-31T02:32:27.498206+00:00"
+"Rianna Pitcher","2021-2022","2022 Shiai",15,"2025-08-31T02:32:27.250837+00:00","2025-08-31T02:32:27.250837+00:00"
+"Noah Lowe","2021-2022","2022 Lepercq Memorial",10,"2025-08-31T02:32:27.04255+00:00","2025-08-31T02:32:27.04255+00:00"
+"Marli Robinson","2021-2022","2022 Lepercq Memorial",10,"2025-08-31T02:32:26.843994+00:00","2025-08-31T02:32:26.843994+00:00"
+"Marleigh Williams","2021-2022","2022 Lepercq Memorial",12,"2025-08-31T02:32:26.632923+00:00","2025-08-31T02:32:26.632923+00:00"
+"Marleigh Williams","2021-2022","2022 Shiai",10,"2025-08-31T02:32:26.528276+00:00","2025-08-31T02:32:26.528276+00:00"
+"Maceo  Davis","2021-2022","2022 Lepercq Memorial",10,"2025-08-31T02:32:26.320123+00:00","2025-08-31T02:32:26.320123+00:00"
+"Kosey Simmons","2021-2022","2022 Lepercq Memorial",15,"2025-08-31T02:32:26.106044+00:00","2025-08-31T02:32:26.106044+00:00"
+"Kosey Simmons","2021-2022","2022 Shiai",5,"2025-08-31T02:32:26.008589+00:00","2025-08-31T02:32:26.008589+00:00"
+"Khwai Mendoza","2021-2022","2022 Lepercq Memorial",15,"2025-08-31T02:32:25.805281+00:00","2026-03-15T23:55:22.562917+00:00"
+"Katar  Simons","2021-2022","2022 Shiai",15,"2025-08-31T02:32:25.602865+00:00","2025-08-31T02:32:25.602865+00:00"
+"Jonathan Trott","2021-2022","2022 Shiai",10,"2025-08-31T02:32:25.397874+00:00","2025-08-31T02:32:25.397874+00:00"
+"Joah Simons","2021-2022","2022 Lepercq Memorial",2,"2025-08-31T02:32:25.171613+00:00","2025-08-31T02:32:25.171613+00:00"
+"Giovonni Vianello","2021-2022","2022 Lepercq Memorial",5,"2025-08-31T02:32:24.934511+00:00","2025-08-31T02:32:24.934511+00:00"
+"Giovonni Vianello","2021-2022","2022 Shiai",10,"2025-08-31T02:32:24.804119+00:00","2025-08-31T02:32:24.804119+00:00"
+"Geraldine Sidders","2021-2022","2022 Lepercq Memorial",20,"2025-08-31T02:32:24.605224+00:00","2025-08-31T02:32:24.605224+00:00"
+"Geraldine Sidders","2021-2022","2022 Shiai",25,"2025-08-31T02:32:24.500001+00:00","2025-08-31T02:32:24.500001+00:00"
+"Enzi  Johnston","2021-2022","2022 Shiai",10,"2025-08-31T02:32:24.285829+00:00","2025-08-31T02:32:24.285829+00:00"
+"DuVal Robinson","2021-2022","2022 Lepercq Memorial",15,"2025-08-31T02:32:24.072098+00:00","2025-08-31T02:32:24.072098+00:00"
+"Davonte  Richadson","2021-2022","2022 Lepercq Memorial",5,"2025-08-31T02:32:23.870938+00:00","2025-08-31T02:32:23.870938+00:00"
+"Davonte  Richadson","2021-2022","2022 Shiai",5,"2025-08-31T02:32:23.763056+00:00","2025-08-31T02:32:23.763056+00:00"
+"David Sainsbury","2021-2022","2022 Lepercq Memorial",15,"2025-08-31T02:32:23.534776+00:00","2025-08-31T02:32:23.534776+00:00"
+"David Sainsbury","2021-2022","2021 BudoCup",10,"2025-08-31T02:32:23.429527+00:00","2025-08-31T02:32:23.429527+00:00"
+"Craig Ferguson","2021-2022","2022 Lepercq Memorial",15,"2025-08-31T02:32:23.203798+00:00","2025-08-31T02:32:23.203798+00:00"
+"Craig Ferguson","2021-2022","2022 Shiai",15,"2025-08-31T02:32:23.075785+00:00","2025-08-31T02:32:23.075785+00:00"
+"Christian Phillips","2021-2022","2022 Shiai",5,"2025-08-31T02:32:22.813012+00:00","2025-08-31T02:32:22.813012+00:00"
+"Charles Ndiaye","2021-2022","2021 BudoCup",15,"2025-08-31T02:32:22.601126+00:00","2025-08-31T02:32:22.601126+00:00"
+"Ayden Tucker","2021-2022","2021 BudoCup",5,"2025-08-31T02:32:22.399+00:00","2025-08-31T02:32:22.399+00:00"
+"Aaron  Lugo","2021-2022","2022 Shiai",15,"2025-08-31T02:32:22.163574+00:00","2025-08-31T02:32:22.163574+00:00"
+"Zenji Ingham","2021-2022","2021 Kata Classic",45,"2025-08-31T02:32:21.893597+00:00","2025-08-31T02:32:21.893597+00:00"
+"Dominique Brown","2021-2022","2022 Lepercq Memorial",50,"2025-08-31T02:32:21.684176+00:00","2025-08-31T02:32:21.684176+00:00"
+"Dominique Brown","2021-2022","2022 Shiai",62,"2025-08-31T02:32:21.580937+00:00","2025-08-31T02:32:21.580937+00:00"
+"Dominique Brown","2021-2022","2021 BudoCup",70,"2025-08-31T02:32:21.479729+00:00","2025-08-31T02:32:21.479729+00:00"
+"Dominique Brown","2021-2022","2021 Kata Classic",40,"2025-08-31T02:32:21.374199+00:00","2025-08-31T02:32:21.374199+00:00"
+"Talia Fox","2021-2022","2022 Lepercq Memorial",55,"2025-08-31T02:32:21.172443+00:00","2025-11-20T20:45:18.348757+00:00"
+"Talia Fox","2021-2022","2022 Shiai",70,"2025-08-31T02:32:21.05878+00:00","2025-11-20T20:45:18.348757+00:00"
+"Talia Fox","2021-2022","2021 BudoCup",50,"2025-08-31T02:32:20.950555+00:00","2025-11-20T20:45:18.348757+00:00"
+"Talia Fox","2021-2022","2021 Kata Classic",30,"2025-08-31T02:32:20.852801+00:00","2025-11-20T20:45:18.348757+00:00"
+"Tony Cabral","2021-2022","2022 Lepercq Memorial",20,"2025-08-31T02:32:20.636475+00:00","2025-08-31T02:32:20.636475+00:00"
+"Tony Cabral","2021-2022","2022 Shiai",5,"2025-08-31T02:32:20.538524+00:00","2025-08-31T02:32:20.538524+00:00"
+"Tony Cabral","2021-2022","2021 BudoCup",10,"2025-08-31T02:32:20.43933+00:00","2025-08-31T02:32:20.43933+00:00"
+"Tony Cabral","2021-2022","2021 Kata Classic",25,"2025-08-31T02:32:20.335087+00:00","2025-08-31T02:32:20.335087+00:00"
+"Reuben Bean","2021-2022","2022 Lepercq Memorial",55,"2025-08-31T02:32:20.126555+00:00","2025-08-31T02:32:20.126555+00:00"
+"Reuben Bean","2021-2022","2022 Shiai",40,"2025-08-31T02:32:20.025645+00:00","2025-08-31T02:32:20.025645+00:00"
+"Reuben Bean","2021-2022","2021 BudoCup",90,"2025-08-31T02:32:19.925366+00:00","2025-08-31T02:32:19.925366+00:00"
+"Reuben Bean","2021-2022","2021 Kata Classic",25,"2025-08-31T02:32:19.814212+00:00","2025-08-31T02:32:19.814212+00:00"
+"Dash Bailey","2021-2022","2022
+ Lepercq Memorial",45,"2025-08-31T02:32:19.597088+00:00","2025-08-31T02:32:19.597088+00:00"
+"Dash Bailey","2021-2022","2022 Shiai",40,"2025-08-31T02:32:19.49422+00:00","2025-08-31T02:32:19.49422+00:00"
+"Dash Bailey","2021-2022","2021 BudoCup",10,"2025-08-31T02:32:19.391734+00:00","2025-08-31T02:32:19.391734+00:00"
+"Dash Bailey","2021-2022","2021 Kata Classic",25,"2025-08-31T02:32:19.279879+00:00","2025-08-31T02:32:19.279879+00:00"
+"Massanda Vaughans","2021-2022","2022 Lepercq Memorial",12,"2025-08-31T02:32:19.046813+00:00","2025-08-31T02:32:19.046813+00:00"
+"Massanda Vaughans","2021-2022","2022 Shiai",15,"2025-08-31T02:32:18.932497+00:00","2025-08-31T02:32:18.932497+00:00"
+"Massanda Vaughans","2021-2022","2021 BudoCup",30,"2025-08-31T02:32:18.827685+00:00","2025-08-31T02:32:18.827685+00:00"
+"Massanda Vaughans","2021-2022","2021 Kata Classic",20,"2025-08-31T02:32:18.727628+00:00","2025-08-31T02:32:18.727628+00:00"
+"Seri Fisher","2021-2022","2021 Kata Classic",15,"2025-08-31T02:32:18.513548+00:00","2025-08-31T02:32:18.513548+00:00"
+"SEIJI WALLINGTON-INGHAM","2021-2022","2022 Lepercq Memorial",10,"2025-08-31T02:32:18.238792+00:00","2025-08-31T02:32:18.238792+00:00"
+"SEIJI WALLINGTON-INGHAM","2021-2022","2022 Shiai",20,"2025-08-31T02:32:18.108599+00:00","2025-08-31T02:32:18.108599+00:00"
+"SEIJI WALLINGTON-INGHAM","2021-2022","2021 Kata Classic",15,"2025-08-31T02:32:17.988012+00:00","2025-08-31T02:32:17.988012+00:00"
+"Sage DeSousa","2021-2022","2022 Lepercq Memorial",40,"2025-08-31T02:32:17.763513+00:00","2025-08-31T02:32:17.763513+00:00"
+"Sage DeSousa","2021-2022","2022 Shiai",25,"2025-08-31T02:32:17.645751+00:00","2025-08-31T02:32:17.645751+00:00"
+"Sage DeSousa","2021-2022","2021 BudoCup",25,"2025-08-31T02:32:17.53631+00:00","2025-08-31T02:32:17.53631+00:00"
+"Sage DeSousa","2021-2022","2021 Kata Classic",15,"2025-08-31T02:32:17.417723+00:00","2025-08-31T02:32:17.417723+00:00"
+"Odin Flanagan","2021-2022","2022 Lepercq Memorial",15,"2025-08-31T02:32:17.197467+00:00","2025-08-31T02:32:17.197467+00:00"
+"Odin Flanagan","2021-2022","2021 Kata Classic",15,"2025-08-31T02:32:17.075658+00:00","2025-08-31T02:32:17.075658+00:00"
+"Marseille Williams","2021-2022","2022 Lepercq Memorial",20,"2025-08-31T02:32:16.859268+00:00","2025-08-31T02:32:16.859268+00:00"
+"Marseille Williams","2021-2022","2022 Shiai",20,"2025-08-31T02:32:16.755795+00:00","2025-08-31T02:32:16.755795+00:00"
+"Marseille Williams","2021-2022","2021 BudoCup",30,"2025-08-31T02:32:16.640442+00:00","2025-08-31T02:32:16.640442+00:00"
+"Marseille Williams","2021-2022","2021 Kata Classic",15,"2025-08-31T02:32:16.541244+00:00","2025-08-31T02:32:16.541244+00:00"
+"Maiya Caisey","2021-2022","2022 Lepercq Memorial",5,"2025-08-31T02:32:16.311193+00:00","2025-08-31T02:32:16.311193+00:00"
+"Maiya Caisey","2021-2022","2021 Kata Classic",15,"2025-08-31T02:32:16.215043+00:00","2025-08-31T02:32:16.215043+00:00"
+"Kiyan Phillips","2021-2022","2022 Shiai",10,"2025-08-31T02:32:15.979761+00:00","2025-08-31T02:32:15.979761+00:00"
+"Kiyan Phillips","2021-2022","2021 Kata Classic",15,"2025-08-31T02:32:15.871362+00:00","2025-08-31T02:32:15.871362+00:00"
+"Ian Lim","2021-2022","2022 Shiai",15,"2025-08-31T02:32:15.635797+00:00","2025-08-31T02:32:15.635797+00:00"
+"Ian Lim","2021-2022","2021 Kata Classic",15,"2025-08-31T02:32:15.542573+00:00","2025-08-31T02:32:15.542573+00:00"
+"D'Ani Pitcher","2021-2022","2022 Shiai",5,"2025-08-31T02:32:15.323815+00:00","2025-08-31T02:32:15.323815+00:00"
+"D'Ani Pitcher","2021-2022","2021 Kata Classic",15,"2025-08-31T02:32:15.224264+00:00","2025-08-31T02:32:15.224264+00:00"
+"Michael Burgess","2021-2022","2022 Lepercq Memorial",32,"2025-08-31T02:32:15.000264+00:00","2025-08-31T02:32:15.000264+00:00"
+"Michael Burgess","2021-2022","2022 Shiai",30,"2025-08-31T02:32:14.880799+00:00","2025-08-31T02:32:14.880799+00:00"
+"Michael Burgess","2021-2022","2021 BudoCup",25,"2025-08-31T02:32:14.77196+00:00","2025-08-31T02:32:14.77196+00:00"
+"Michael Burgess","2021-2022","2021 Kata Classic",10,"2025-08-31T02:32:14.662059+00:00","2025-08-31T02:32:14.662059+00:00"
+"Lucas Frias","2021-2022","2022 Lepercq Memorial",10,"2025-08-31T02:32:14.425261+00:00","2025-08-31T02:32:14.425261+00:00"
+"Lucas Frias","2021-2022","2022 Shiai",10,"2025-08-31T02:32:14.287881+00:00","2025-08-31T02:32:14.287881+00:00"
+"Lucas Frias","2021-2022","2021 BudoCup",35,"2025-08-31T02:32:14.186954+00:00","2025-08-31T02:32:14.186954+00:00"
+"Lucas Frias","2021-2022","2021 Kata Classic",10,"2025-08-31T02:32:14.070239+00:00","2025-08-31T02:32:14.070239+00:00"
+"Dylan Flanagan","2021-2022","2022 Lepercq Memorial",10,"2025-08-31T02:32:13.851555+00:00","2025-08-31T02:32:13.851555+00:00"
+"Dylan Flanagan","2021-2022","2021 Kata Classic",10,"2025-08-31T02:32:13.716858+00:00","2025-08-31T02:32:13.716858+00:00"
+"Darin Woolridge","2021-2022","2022 Shiai",20,"2025-08-31T02:32:13.497318+00:00","2025-08-31T02:32:13.497318+00:00"
+"Darin Woolridge","2021-2022","2021 BudoCup",15,"2025-08-31T02:32:13.381095+00:00","2025-08-31T02:32:13.381095+00:00"
+"Darin Woolridge","2021-2022","2021 Kata Classic",10,"2025-08-31T02:32:13.273704+00:00","2025-08-31T02:32:13.273704+00:00"
+"Callahj Simons","2021-2022","2022 Shiai",15,"2025-08-31T02:32:13.048989+00:00","2025-08-31T02:32:13.048989+00:00"
+"Callahj Simons","2021-2022","2021 BudoCup",15,"2025-08-31T02:32:12.943329+00:00","2025-08-31T02:32:12.943329+00:00"
+"Callahj Simons","2021-2022","2021 Kata Classic",10,"2025-08-31T02:32:12.841831+00:00","2025-08-31T02:32:12.841831+00:00"
+"Amarriah Vaughans","2021-2022","2022 Lepercq Memorial",15,"2025-08-31T02:32:12.585232+00:00","2025-08-31T02:32:12.585232+00:00"
+"Amarriah Vaughans","2021-2022","2022 Shiai",10,"2025-08-31T02:32:12.466293+00:00","2025-08-31T02:32:12.466293+00:00"
+"Amarriah Vaughans","2021-2022","2021 Kata Classic",10,"2025-08-31T02:32:12.367882+00:00","2025-08-31T02:32:12.367882+00:00"
+"Alisa Lightbourne","2021-2022","2021 Kata Classic",10,"2025-08-31T02:32:12.081951+00:00","2025-08-31T02:32:12.081951+00:00"
+"Alessia Vianello","2021-2022","2022 Shiai",15,"2025-08-31T02:32:11.873926+00:00","2025-08-31T02:32:11.873926+00:00"
+"Alessia Vianello","2021-2022","2021 Kata Classic",10,"2025-08-31T02:32:11.760329+00:00","2025-08-31T02:32:11.760329+00:00"
+"Talaya Sousa","2021-2022","2022 Shiai",10,"2025-08-31T02:32:11.516144+00:00","2025-08-31T02:32:11.516144+00:00"
+"Talaya Sousa","2021-2022","2021 Kata Classic",5,"2025-08-31T02:32:11.401057+00:00","2025-08-31T02:32:11.401057+00:00"
+"Skyler O'Connor","2021-2022","2021 BudoCup",10,"2025-08-31T02:32:11.188014+00:00","2025-08-31T02:32:11.188014+00:00"
+"Skyler O'Connor","2021-2022","2021 Kata Classic",5,"2025-08-31T02:32:11.094178+00:00","2025-08-31T02:32:11.094178+00:00"
+"Sierra DeSousa","2021-2022","2021 BudoCup",20,"2025-08-31T02:32:10.869676+00:00","2025-08-31T02:32:10.869676+00:00"
+"Sierra DeSousa","2021-2022","2021 Kata Classic",5,"2025-08-31T02:32:10.761063+00:00","2025-08-31T02:32:10.761063+00:00"
+"Nadia DeSousa","2021-2022","2022 Lepercq Memorial",15,"2025-08-31T02:32:10.534929+00:00","2025-08-31T02:32:10.534929+00:00"
+"Nadia DeSousa","2021-2022","2022 Shiai",15,"2025-08-31T02:32:10.402638+00:00","2025-08-31T02:32:10.402638+00:00"
+"Nadia DeSousa","2021-2022","2021 BudoCup",15,"2025-08-31T02:32:10.29876+00:00","2025-08-31T02:32:10.29876+00:00"
+"Nadia DeSousa","2021-2022","2021 Kata Classic",5,"2025-08-31T02:32:10.148036+00:00","2025-08-31T02:32:10.148036+00:00"
+"Chan Simons","2021-2022","2022 Lepercq Memorial",10,"2025-08-31T02:32:09.882733+00:00","2025-08-31T02:32:09.882733+00:00"
+"Chan Simons","2021-2022","2021 Kata Classic",5,"2025-08-31T02:32:09.774084+00:00","2025-08-31T02:32:09.774084+00:00"
+"Ariah Tucker","2021-2022","2021 Kata Classic",5,"2025-08-31T02:32:09.538678+00:00","2025-08-31T02:32:09.538678+00:00"
+"Naomi Butterfield","2021-2022","2022 Shiai",15,"2025-08-31T02:32:09.251642+00:00","2025-08-31T02:32:09.251642+00:00"
+"Naomi Butterfield","2021-2022","2021 BudoCup",5,"2025-08-31T02:32:09.121006+00:00","2025-08-31T02:32:09.121006+00:00"
+"Naomi Butterfield","2021-2022","2021 Kata Classic",2,"2025-08-31T02:32:08.987215+00:00","2025-08-31T02:32:08.987215+00:00"`;
+
+// ===================== CSV PARSER =====================
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = parseCSVLine(lines[0]);
+  const records = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const vals = parseCSVLine(lines[i]);
+    if (vals.length >= 4) {
+      records.push({
+        name: vals[0].trim(),
+        year: vals[1].trim(),
+        event: vals[2].trim(),
+        score: parseInt(vals[3]) || 0
+      });
+    }
+  }
+  return records;
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current);
+  return result;
+}
+
+// ===================== DATA PROCESSING =====================
+let rawData = [];
+let athleteMap = {};
+let allYears = [];
+let allEvents = [];
+let sortField = 'totalPoints';
+let sortDir = 'desc';
+let currentPage = 1;
+const PAGE_SIZE = 20;
+let activeYear = '';
+let chartInstance = null;
+
+function processData(records) {
+  const map = {};
+  records.forEach(r => {
+    const key = r.name.toLowerCase().trim();
+    if (!map[key]) {
+      map[key] = {
+        name: r.name,
+        totalPoints: 0,
+        events: [],
+        years: {},
+        eventCount: 0
+      };
+    }
+    map[key].totalPoints += r.score;
+    map[key].events.push({ event: r.event, year: r.year, score: r.score });
+    map[key].eventCount++;
+    if (!map[key].years[r.year]) map[key].years[r.year] = 0;
+    map[key].years[r.year] += r.score;
+  });
+
+  // Compute best year
+  Object.values(map).forEach(a => {
+    let best = null, bestPts = -1;
+    Object.entries(a.years).forEach(([y, p]) => {
+      if (p > bestPts) { bestPts = p; best = y; }
+    });
+    a.bestYear = best;
+    a.bestYearPts = bestPts;
+  });
+
+  return map;
+}
+
+function getInitials(name) {
+  return name.trim().split(/\s+/).map(w => w[0] || '').join('').toUpperCase().slice(0, 2);
+}
+
+function getRankBadgeClass(rank) {
+  if (rank === 1) return 'gold';
+  if (rank === 2) return 'silver';
+  if (rank === 3) return 'bronze';
+  return '';
+}
+
+function getRankMedal(rank) {
+  if (rank === 1) return '🥇';
+  if (rank === 2) return '🥈';
+  if (rank === 3) return '🥉';
+  return `#${rank}`;
+}
+
+// ===================== RENDER STATS BAR =====================
+function renderStats() {
+  const athletes = Object.values(athleteMap);
+  const totalPts = athletes.reduce((s, a) => s + a.totalPoints, 0);
+  const eventsSet = new Set(rawData.map(r => r.event));
+  document.getElementById('statAthletes').textContent = athletes.length;
+  document.getElementById('statEvents').textContent = eventsSet.size;
+  document.getElementById('statSeasons').textContent = allYears.length;
+  document.getElementById('statPoints').textContent = totalPts.toLocaleString();
+}
+
+// ===================== RENDER YEAR TABS =====================
+function renderYearTabs() {
+  const container = document.getElementById('yearTabs');
+  container.innerHTML = '';
+  allYears.forEach((y, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'year-tab' + (y === activeYear ? ' active' : '');
+    btn.textContent = y;
+    btn.onclick = () => { activeYear = y; renderYearTabs(); renderPodium(); };
+    container.appendChild(btn);
+  });
+}
+
+// ===================== RENDER PODIUM =====================
+function renderPodium() {
+  const grid = document.getElementById('podiumGrid');
+  grid.innerHTML = '';
+
+  // Get athletes for the selected year
+  const yearAthletes = [];
+  Object.values(athleteMap).forEach(a => {
+    if (a.years[activeYear] !== undefined) {
+      yearAthletes.push({ name: a.name, pts: a.years[activeYear] });
+    }
+  });
+  yearAthletes.sort((a, b) => b.pts - a.pts);
+  const top5 = yearAthletes.slice(0, 5);
+
+  top5.forEach((a, i) => {
+    const rank = i + 1;
+    const card = document.createElement('div');
+    card.className = `podium-card rank-${rank}`;
+    card.innerHTML = `
+      <div class="podium-rank">${getRankMedal(rank)}</div>
+      <div class="podium-avatar">${getInitials(a.name)}</div>
+      <div class="podium-name">${a.name}</div>
+      <div class="podium-pts">${a.pts}</div>
+      <div class="podium-pts-label">pts this season</div>
+    `;
+    card.onclick = () => openModal(a.name);
+    grid.appendChild(card);
+  });
+
+  if (top5.length === 0) {
+    grid.innerHTML = '<div style="color:var(--text-3);padding:2rem;grid-column:1/-1;text-align:center;">No data for this season.</div>';
+  }
+}
+
+// ===================== RENDER RANKINGS TABLE =====================
+function getFilteredAthletes() {
+  const search = document.getElementById('searchInput').value.toLowerCase().trim();
+  const yearF = document.getElementById('yearFilter').value;
+  const eventF = document.getElementById('eventFilter').value;
+
+  let athletes = Object.values(athleteMap);
+
+  if (search) {
+    athletes = athletes.filter(a => a.name.toLowerCase().includes(search));
+  }
+
+  if (yearF || eventF) {
+    athletes = athletes.filter(a => {
+      return a.events.some(e => {
+        const yearOk = !yearF || e.year === yearF;
+        const eventOk = !eventF || e.event === eventF;
+        return yearOk && eventOk;
+      });
+    });
+  }
+
+  // Sort
+  athletes.sort((a, b) => {
+    let va = a[sortField], vb = b[sortField];
+    if (sortField === 'name') { va = a.name.toLowerCase(); vb = b.name.toLowerCase(); }
+    if (sortField === 'events') { va = a.eventCount; vb = b.eventCount; }
+    if (sortField === 'bestYear') { va = a.bestYear || ''; vb = b.bestYear || ''; }
+    if (sortField === 'rank') { va = a.totalPoints; vb = b.totalPoints; sortDir === 'asc' ? null : null; }
+    if (sortDir === 'asc') return va > vb ? 1 : va < vb ? -1 : 0;
+    return va < vb ? 1 : va > vb ? -1 : 0;
+  });
+
+  return athletes;
+}
+
+function renderTable() {
+  const athletes = getFilteredAthletes();
+  const body = document.getElementById('rankingsBody');
+  const noResults = document.getElementById('noResults');
+  const total = athletes.length;
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page = athletes.slice(start, start + PAGE_SIZE);
+
+  if (total === 0) {
+    body.innerHTML = '';
+    noResults.style.display = 'block';
+  } else {
+    noResults.style.display = 'none';
+    body.innerHTML = page.map((a, i) => {
+      const rank = start + i + 1;
+      const badgeClass = getRankBadgeClass(rank);
+      return `<tr onclick="openModal('${a.name.replace(/'/g,"\\'")}')">
+        <td><span class="rank-badge ${badgeClass}">${rank}</span></td>
+        <td><div class="athlete-cell">
+          <div class="athlete-avatar-sm">${getInitials(a.name)}</div>
+          <span class="athlete-name-cell">${a.name}</span>
+        </div></td>
+        <td class="pts-cell">${a.totalPoints}</td>
+        <td class="events-cell">${a.eventCount}</td>
+        <td><span class="year-pill">${a.bestYear || '—'}</span></td>
+        <td><button class="btn btn-ghost" style="padding:6px 14px;font-size:0.8rem;" onclick="event.stopPropagation();openModal('${a.name.replace(/'/g,"\\'")}')">View</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  renderPagination(total);
+}
+
+function renderPagination(total) {
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const pag = document.getElementById('pagination');
+  if (totalPages <= 1) { pag.innerHTML = ''; return; }
+
+  const start = (currentPage - 1) * PAGE_SIZE + 1;
+  const end = Math.min(currentPage * PAGE_SIZE, total);
+
+  let pages = '';
+  const maxVisible = 5;
+  let startP = Math.max(1, currentPage - 2);
+  let endP = Math.min(totalPages, startP + maxVisible - 1);
+  if (endP - startP < maxVisible - 1) startP = Math.max(1, endP - maxVisible + 1);
+
+  for (let p = startP; p <= endP; p++) {
+    pages += `<button class="page-btn ${p === currentPage ? 'active' : ''}" onclick="goToPage(${p})">${p}</button>`;
+  }
+
+  pag.innerHTML = `
+    <span class="pagination-info">Showing ${start}–${end} of ${total} athletes</span>
+    <div class="pagination-controls">
+      <button class="page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>‹</button>
+      ${pages}
+      <button class="page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>›</button>
+    </div>`;
+}
+
+function goToPage(p) {
+  const athletes = getFilteredAthletes();
+  const totalPages = Math.ceil(athletes.length / PAGE_SIZE);
+  if (p < 1 || p > totalPages) return;
+  currentPage = p;
+  renderTable();
+}
+
+function sortBy(field) {
+  if (sortField === field) {
+    sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+  } else {
+    sortField = field;
+    sortDir = field === 'name' || field === 'bestYear' ? 'asc' : 'desc';
+  }
+  currentPage = 1;
+  updateSortHeaders();
+  renderTable();
+}
+
+function updateSortHeaders() {
+  const fields = ['rank','name','totalPoints','events','bestYear'];
+  fields.forEach(f => {
+    const th = document.getElementById(`th-${f}`);
+    if (!th) return;
+    th.classList.toggle('sorted', f === sortField);
+    const icon = th.querySelector('.sort-icon');
+    if (icon) icon.textContent = f === sortField ? (sortDir === 'desc' ? '↓' : '↑') : '↕';
+  });
+}
+
+function resetFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('yearFilter').value = '';
+  document.getElementById('eventFilter').value = '';
+  currentPage = 1;
+  renderTable();
+}
+
+// ===================== MODAL =====================
+function openModal(name) {
+  const key = name.toLowerCase().trim();
+  const athlete = athleteMap[key];
+  if (!athlete) return;
+
+  // Header
+  document.getElementById('modalAvatar').textContent = getInitials(athlete.name);
+  document.getElementById('modalName').textContent = athlete.name;
+  const yearsParticipated = Object.keys(athlete.years).sort();
+  document.getElementById('modalMeta').textContent = `${yearsParticipated.length} season${yearsParticipated.length !== 1 ? 's' : ''} · ${athlete.eventCount} event entries`;
+
+  // Stats grid
+  const bestYearEntry = Object.entries(athlete.years).sort((a,b) => b[1]-a[1])[0];
+  document.getElementById('modalStatsGrid').innerHTML = `
+    <div class="modal-stat">
+      <div class="stat-label">Total Points</div>
+      <div class="stat-value accent">${athlete.totalPoints}</div>
+    </div>
+    <div class="modal-stat">
+      <div class="stat-label">Events Entered</div>
+      <div class="stat-value blue">${athlete.eventCount}</div>
+    </div>
+    <div class="modal-stat">
+      <div class="stat-label">Seasons Active</div>
+      <div class="stat-value green">${yearsParticipated.length}</div>
+    </div>
+    <div class="modal-stat">
+      <div class="stat-label">Best Season</div>
+      <div class="stat-value" style="font-size:1rem;">${bestYearEntry ? bestYearEntry[0] : '—'}</div>
+    </div>
+    <div class="modal-stat">
+      <div class="stat-label">Best Season Pts</div>
+      <div class="stat-value accent">${bestYearEntry ? bestYearEntry[1] : 0}</div>
+    </div>
+    <div class="modal-stat">
+      <div class="stat-label">Avg per Event</div>
+      <div class="stat-value">${athlete.eventCount > 0 ? Math.round(athlete.totalPoints / athlete.eventCount) : 0}</div>
+    </div>
+  `;
+
+  // Chart
+  renderPerformanceChart(athlete);
+
+  // Events breakdown
+  const sortedEvents = [...athlete.events].sort((a,b) => b.score - a.score);
+  const maxScore = sortedEvents[0]?.score || 1;
+  document.getElementById('eventsBreakdown').innerHTML = sortedEvents.map(e => `
+    <div class="event-row">
+      <span class="event-name">${e.event}</span>
+      <span class="event-year-tag">${e.year}</span>
+      <div class="event-bar-wrap">
+        <div class="event-bar-bg">
+          <div class="event-bar-fill" style="width:${Math.round((e.score/maxScore)*100)}%"></div>
+        </div>
+      </div>
+      <span class="event-pts">${e.score}</span>
+    </div>
+  `).join('');
+
+  document.getElementById('modalBackdrop').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function renderPerformanceChart(athlete) {
+  const ctx = document.getElementById('performanceChart').getContext('2d');
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+  const years = Object.keys(athlete.years).sort();
+  const pts = years.map(y => athlete.years[y]);
+
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: years,
+      datasets: [{
+        label: 'Points',
+        data: pts,
+        backgroundColor: years.map((_, i) => i === pts.indexOf(Math.max(...pts))
+          ? 'rgba(224,48,48,0.85)'
+          : 'rgba(48,96,232,0.55)'),
+        borderColor: years.map((_, i) => i === pts.indexOf(Math.max(...pts))
+          ? '#e03030'
+          : '#3060e8'),
+        borderWidth: 1.5,
+        borderRadius: 8,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(14,14,22,0.95)',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          titleColor: '#f0f0ff',
+          bodyColor: '#9898b8',
+          padding: 12,
+          callbacks: {
+            label: ctx => ` ${ctx.parsed.y} pts`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: '#9898b8', font: { size: 11, weight: '600' } }
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: { color: '#9898b8', font: { size: 11 } },
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modalBackdrop')) closeModalDirect();
+}
+
+function closeModalDirect() {
+  document.getElementById('modalBackdrop').classList.remove('open');
+  document.body.style.overflow = '';
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+}
+
+// Close on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModalDirect();
+});
+
+// ===================== POPULATE FILTERS =====================
+function populateFilters() {
+  const yearSel = document.getElementById('yearFilter');
+  const eventSel = document.getElementById('eventFilter');
+
+  allYears.forEach(y => {
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    yearSel.appendChild(opt);
+  });
+
+  allEvents.forEach(ev => {
+    const opt = document.createElement('option');
+    opt.value = ev; opt.textContent = ev;
+    eventSel.appendChild(opt);
+  });
+}
+
+// ===================== EVENT LISTENERS =====================
+document.getElementById('searchInput').addEventListener('input', () => {
+  currentPage = 1;
+  renderTable();
+});
+document.getElementById('yearFilter').addEventListener('change', () => {
+  currentPage = 1;
+  renderTable();
+});
+document.getElementById('eventFilter').addEventListener('change', () => {
+  currentPage = 1;
+  renderTable();
+});
+
+// ===================== INIT =====================
+function init() {
+  rawData = parseCSV(CSV_DATA);
+
+  // Collect unique years and events
+  const yearsSet = new Set(rawData.map(r => r.year));
+  const eventsSet = new Set(rawData.map(r => r.event));
+  allYears = [...yearsSet].sort().reverse();
+  allEvents = [...eventsSet].sort();
+
+  athleteMap = processData(rawData);
+
+  activeYear = allYears[0] || '';
+
+  renderStats();
+  populateFilters();
+  renderYearTabs();
+  renderPodium();
+  renderTable();
+  updateSortHeaders();
+
+  // Hide loading
+  setTimeout(() => {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.classList.add('hidden');
+    setTimeout(() => overlay.remove(), 400);
+  }, 400);
+}
+
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
