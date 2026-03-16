@@ -618,7 +618,28 @@
     box-shadow: 0 2px 12px rgba(224,48,48,0.3);
   }
   .chart-container { position: relative; height: 260px; }
-  .chart-container.tall { height: 320px; }
+  .chart-container.tall { height: 300px; }
+  .season-selector {
+    margin-bottom: 0.75rem;
+  }
+  .season-tabs {
+    display: flex; flex-wrap: wrap; gap: 0.4rem;
+  }
+  .season-tab-btn {
+    padding: 4px 14px;
+    border-radius: 100px;
+    font-size: 0.76rem; font-weight: 700;
+    cursor: pointer; border: 1px solid var(--border);
+    background: transparent; color: var(--text-3);
+    font-family: inherit;
+    transition: all var(--transition);
+  }
+  .season-tab-btn:hover { border-color: var(--border-hover); color: var(--text-2); }
+  .season-tab-btn.active {
+    background: linear-gradient(135deg, #3060e8 0%, #1a3fb0 100%);
+    border-color: #3060e8; color: #fff;
+    box-shadow: 0 2px 10px rgba(48,96,232,0.3);
+  }
   .chart-legend {
     display: flex; flex-wrap: wrap; gap: 0.5rem 1rem;
     margin-top: 0.75rem;
@@ -872,6 +893,9 @@
             <button class="chart-toggle-btn active" id="chartViewYearly" onclick="switchChartView('yearly')">Year to Year</button>
             <button class="chart-toggle-btn" id="chartViewEvents" onclick="switchChartView('events')">By Event</button>
           </div>
+        </div>
+        <div class="season-selector" id="seasonSelector" style="display:none;">
+          <div class="season-tabs" id="seasonTabs"></div>
         </div>
         <div class="chart-container" id="chartContainer">
           <canvas id="performanceChart"></canvas>
@@ -1725,18 +1749,45 @@ const EVENT_COLORS = [
 
 let currentChartView = 'yearly';
 
+let currentEventSeason = null;
+
 function switchChartView(view) {
   currentChartView = view;
   document.getElementById('chartViewYearly').classList.toggle('active', view === 'yearly');
   document.getElementById('chartViewEvents').classList.toggle('active', view === 'events');
   if (!currentModalAthlete) return;
   if (view === 'yearly') {
+    document.getElementById('seasonSelector').style.display = 'none';
     document.getElementById('chartContainer').classList.remove('tall');
+    document.getElementById('chartLegend').innerHTML = '';
     renderPerformanceChart(currentModalAthlete);
   } else {
     document.getElementById('chartContainer').classList.add('tall');
-    renderEventsByYearChart(currentModalAthlete);
+    buildSeasonTabs(currentModalAthlete);
+    document.getElementById('seasonSelector').style.display = 'block';
+    renderEventsBySeasonChart(currentModalAthlete, currentEventSeason);
   }
+}
+
+function buildSeasonTabs(athlete) {
+  const seasons = Object.keys(athlete.years).sort();
+  // Default to first season if not set or not available
+  if (!currentEventSeason || !seasons.includes(currentEventSeason)) {
+    currentEventSeason = seasons[0];
+  }
+  const tabsEl = document.getElementById('seasonTabs');
+  tabsEl.innerHTML = seasons.map(s =>
+    `<button class="season-tab-btn ${s === currentEventSeason ? 'active' : ''}" onclick="selectEventSeason('${s}')">${s}</button>`
+  ).join('');
+}
+
+function selectEventSeason(season) {
+  currentEventSeason = season;
+  // Update active tab
+  document.querySelectorAll('.season-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent === season);
+  });
+  if (currentModalAthlete) renderEventsBySeasonChart(currentModalAthlete, season);
 }
 
 function renderPerformanceChart(athlete) {
@@ -1794,49 +1845,51 @@ function renderPerformanceChart(athlete) {
   });
 }
 
-function renderEventsByYearChart(athlete) {
+function renderEventsBySeasonChart(athlete, season) {
   const ctx = document.getElementById('performanceChart').getContext('2d');
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
 
-  // All seasons sorted
-  const allSeasons = Object.keys(athlete.years).sort();
+  // Filter events for the selected season, sorted alphabetically by event name
+  const seasonEvents = athlete.events
+    .filter(e => e.year === season)
+    .sort((a, b) => a.event.localeCompare(b.event));
 
-  // Build a map: eventName -> { season: score }
-  const eventSeasonMap = {};
-  athlete.events.forEach(e => {
-    if (!eventSeasonMap[e.event]) eventSeasonMap[e.event] = {};
-    // If athlete competed in same event multiple times in a season, sum scores
-    eventSeasonMap[e.event][e.year] = (eventSeasonMap[e.event][e.year] || 0) + e.score;
+  // Aggregate scores if athlete has multiple entries per event in same season
+  const eventMap = {};
+  seasonEvents.forEach(e => {
+    eventMap[e.event] = (eventMap[e.event] || 0) + e.score;
   });
+  const eventNames = Object.keys(eventMap);
+  const scores = eventNames.map(n => eventMap[n]);
+  const maxScore = Math.max(...scores, 1);
 
-  // Sort events alphabetically
-  const eventNames = Object.keys(eventSeasonMap).sort();
-
-  const datasets = eventNames.map((evName, i) => {
-    const color = EVENT_COLORS[i % EVENT_COLORS.length];
-    return {
-      label: evName,
-      data: allSeasons.map(s => eventSeasonMap[evName][s] ?? null),
-      borderColor: color,
-      backgroundColor: color + '22',
-      borderWidth: 2,
-      tension: 0.3,
-      spanGaps: false,
-      pointBackgroundColor: color,
-      pointBorderColor: 'rgba(255,255,255,0.6)',
-      pointBorderWidth: 1.5,
-      pointRadius: 5,
-      pointHoverRadius: 8,
-    };
-  });
+  // Gradient
+  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+  gradient.addColorStop(0, 'rgba(48,96,232,0.35)');
+  gradient.addColorStop(1, 'rgba(48,96,232,0.02)');
 
   chartInstance = new Chart(ctx, {
     type: 'line',
-    data: { labels: allSeasons, datasets },
+    data: {
+      labels: eventNames,
+      datasets: [{
+        label: season,
+        data: scores,
+        fill: true,
+        backgroundColor: gradient,
+        borderColor: '#3060e8',
+        borderWidth: 2.5,
+        tension: 0.3,
+        pointBackgroundColor: scores.map(s => s === maxScore ? '#e03030' : '#3060e8'),
+        pointBorderColor: scores.map(s => s === maxScore ? '#fff' : 'rgba(255,255,255,0.5)'),
+        pointBorderWidth: scores.map(s => s === maxScore ? 2.5 : 1.5),
+        pointRadius: scores.map(s => s === maxScore ? 8 : 5),
+        pointHoverRadius: 10,
+      }]
+    },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -1846,25 +1899,31 @@ function renderEventsByYearChart(athlete) {
           titleColor: '#f0f0ff',
           bodyColor: '#9898b8',
           padding: 12,
-          callbacks: {
-            label: ctx => ctx.parsed.y !== null ? ` ${ctx.dataset.label}: ${ctx.parsed.y} pts` : null,
-            filter: item => item.parsed.y !== null
-          }
+          callbacks: { label: ctx => ` ${ctx.parsed.y} pts` }
         }
       },
       scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#9898b8', font: { size: 11, weight: '600' } } },
-        y: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#9898b8', font: { size: 11 } }, beginAtZero: true }
+        x: {
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          ticks: {
+            color: '#9898b8',
+            font: { size: 10, weight: '600' },
+            maxRotation: 35,
+            minRotation: 20
+          }
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          ticks: { color: '#9898b8', font: { size: 11 } },
+          beginAtZero: true
+        }
       }
     }
   });
 
-  // Render custom legend
-  const legend = document.getElementById('chartLegend');
-  legend.innerHTML = eventNames.map((evName, i) => {
-    const color = EVENT_COLORS[i % EVENT_COLORS.length];
-    return `<div class="chart-legend-item"><div class="chart-legend-dot" style="background:${color}"></div>${evName}</div>`;
-  }).join('');
+  // Legend: show total for the season
+  document.getElementById('chartLegend').innerHTML =
+    `<div class="chart-legend-item"><div class="chart-legend-dot" style="background:#e03030"></div>Best event highlighted in red &nbsp;&bull;&nbsp; Season total: <strong style="color:#f0f0ff">${scores.reduce((a,b)=>a+b,0)} pts</strong></div>`;
 }
 
 function closeModal(e) {
