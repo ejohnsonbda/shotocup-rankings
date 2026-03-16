@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shoto Cup — Scoring System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  /* ===================== DESIGN TOKENS ===================== */
+  :root {
+    --bg: #080810;
+    --surface-1: rgba(14,14,22,0.96);
+    --surface-2: rgba(20,20,32,0.92);
+    --surface-3: #0d0d18;
+    --border: rgba(255,255,255,0.07);
+    --border-hover: rgba(255,255,255,0.14);
+    --text: #f0f0ff;
+    --text-2: #9898b8;
+    --text-3: #5a5a7a;
+    --accent: #e03030;
+    --accent-glow: rgba(224,48,48,0.22);
+    --accent-2: #3060e8;
+    --accent-2-glow: rgba(48,96,232,0.18);
+    --gold: #f59e0b;
+    --silver: #94a3b8;
+    --bronze: #cd7c2f;
+    --green: #22c55e;
+    --radius-xl: 28px;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+    --shadow-card: 0 24px 64px rgba(0,0,0,0.55), 0 2px 0 rgba(255,255,255,0.04) inset;
+    --transition: 0.18s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* ===================== BACKGROUND ===================== */
+  .bg-mesh {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  }
+  .bg-mesh::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 0% 0%, rgba(224,48,48,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 100% 0%, rgba(48,96,232,0.10) 0%, transparent 55%),
+      radial-gradient(ellipse 70% 60% at 50% 100%, rgba(48,96,232,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 100% 100%, rgba(224,48,48,0.07) 0%, transparent 50%);
+  }
+  .bg-grid {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+  }
+
+  /* ===================== HERO NAV ===================== */
+  .hero-nav {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.4rem clamp(1.5rem, 5vw, 5rem);
+    z-index: 4;
+  }
+  .hero-logo {
+    display: flex; align-items: center;
+    text-decoration: none;
+    transition: opacity var(--transition);
+  }
+  .hero-logo:hover { opacity: 0.85; }
+  .hero-logo img {
+    height: 44px; width: auto; display: block;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+  }
+  .hero-nav-links {
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .nav-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 18px;
+    border-radius: 100px;
+    font-size: 0.82rem; font-weight: 700;
+    text-decoration: none;
+    letter-spacing: 0.04em;
+    color: rgba(255,255,255,0.75);
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(12px);
+    transition: all var(--transition);
+  }
+  .nav-link:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.22);
+  }
+  .nav-link.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 14px rgba(224,48,48,0.35);
+  }
+
+  /* ===================== HERO ===================== */
+  .hero {
+    position: relative;
+    min-height: 68vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6rem clamp(1.5rem, 5vw, 5rem) 5rem;
+    overflow: hidden;
+    z-index: 1;
+    text-align: center;
+  }
+  .hero-bg-img {
+    position: absolute; inset: 0;
+    background-image: url('https://images.unsplash.com/photo-1771909718960-7fab338a09d3?q=80&w=1170&auto=format&fit=crop');
+    background-size: cover;
+    background-position: center 30%;
+    transform: scale(1.05);
+    animation: hero-zoom 10s ease forwards;
+    z-index: 0;
+  }
+  @keyframes hero-zoom {
+    from { transform: scale(1.05); }
+    to   { transform: scale(1); }
+  }
+  .hero-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(8,8,20,0.88) 0%, rgba(30,8,8,0.55) 50%, rgba(8,8,20,0.82) 100%);
+    z-index: 1;
+  }
+  .hero-fade {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 180px;
+    background: linear-gradient(to bottom, transparent, var(--bg));
+    z-index: 2;
+  }
+  .hero-content {
+    position: relative; z-index: 3;
+    max-width: 800px; width: 100%;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-size: 0.75rem; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--text-2);
+    margin-bottom: 1.4rem;
+  }
+  .hero-eyebrow .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent);
+    animation: pulse-dot 2s infinite;
+  }
+  @keyframes pulse-dot {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+  .hero-title {
+    font-size: clamp(2.8rem, 7vw, 5.2rem);
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    margin-bottom: 1rem;
+  }
+  .hero-title span { color: var(--accent); }
+  .hero-sub {
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    font-weight: 400;
+    color: var(--text-2);
+    max-width: 580px;
+    text-align: center;
+  }
+
+  /* ===================== MAIN CONTENT ===================== */
+  .page-section {
+    position: relative; z-index: 1;
+    padding: 0 clamp(1rem, 4vw, 4rem) 6rem;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* ===================== SECTION HEADER ===================== */
+  .section-header {
+    margin-bottom: 2.5rem;
+  }
+  .section-eyebrow {
+    font-size: 0.72rem; font-weight: 700;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 0.5rem;
+  }
+  .section-title {
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    font-weight: 800; letter-spacing: -0.03em;
+    line-height: 1.15;
+  }
+  .section-desc {
+    margin-top: 0.75rem;
+    font-size: 1rem; color: var(--text-2);
+    max-width: 680px; line-height: 1.7;
+  }
+
+  /* ===================== MEDAL CARDS ===================== */
+  .medal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 3rem;
+  }
+  .medal-card {
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2rem 1.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+  }
+  .medal-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-card);
+  }
+  .medal-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  .medal-card.gold { border-color: rgba(245,158,11,0.25); }
+  .medal-card.gold::before { background: linear-gradient(90deg, #f59e0b, #fcd34d); }
+  .medal-card.gold:hover { border-color: rgba(245,158,11,0.45); box-shadow: 0 24px 64px rgba(245,158,11,0.15); }
+  .medal-card.silver { border-color: rgba(148,163,184,0.25); }
+  .medal-card.silver::before { background: linear-gradient(90deg, #94a3b8, #cbd5e1); }
+  .medal-card.silver:hover { border-color: rgba(148,163,184,0.45); box-shadow: 0 24px 64px rgba(148,163,184,0.12); }
+  .medal-card.bronze { border-color: rgba(205,124,47,0.25); }
+  .medal-card.bronze::before { background: linear-gradient(90deg, #cd7c2f, #e8a96a); }
+  .medal-card.bronze:hover { border-color: rgba(205,124,47,0.45); box-shadow: 0 24px 64px rgba(205,124,47,0.12); }
+  .medal-card.combine { border-color: rgba(224,48,48,0.3); }
+  .medal-card.combine::before { background: linear-gradient(90deg, #e03030, #ff6060); }
+  .medal-card.combine:hover { border-color: rgba(224,48,48,0.5); box-shadow: 0 24px 64px rgba(224,48,48,0.18); }
+
+  .medal-icon {
+    font-size: 3.5rem;
+    line-height: 1;
+    margin-bottom: 1rem;
+    display: block;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+  }
+  .medal-label {
+    font-size: 0.72rem; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--text-3); margin-bottom: 0.4rem;
+  }
+  .medal-name {
+    font-size: 1.4rem; font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.75rem;
+  }
+  .medal-card.gold .medal-name { color: var(--gold); }
+  .medal-card.silver .medal-name { color: var(--silver); }
+  .medal-card.bronze .medal-name { color: var(--bronze); }
+  .medal-card.combine .medal-name { color: var(--accent); }
+  .medal-pts {
+    font-size: 3.2rem; font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+  .medal-card.gold .medal-pts { color: var(--gold); }
+  .medal-card.silver .medal-pts { color: var(--silver); }
+  .medal-card.bronze .medal-pts { color: var(--bronze); }
+  .medal-card.combine .medal-pts { color: var(--accent); }
+  .medal-pts-label {
+    font-size: 0.8rem; font-weight: 600;
+    color: var(--text-3); margin-top: 0.25rem;
+  }
+  .medal-desc {
+    margin-top: 1rem;
+    font-size: 0.82rem; color: var(--text-2);
+    line-height: 1.6;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+  }
+
+  /* ===================== COMBINE EXPLAINER ===================== */
+  .combine-section {
+    background: var(--surface-3);
+    border: 1px solid rgba(224,48,48,0.2);
+    border-radius: var(--radius-xl);
+    padding: 2.5rem 2.5rem;
+    margin-bottom: 3rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .combine-section::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, #e03030, #ff6060, #e03030);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+  .combine-glow {
+    position: absolute; top: -60px; right: -60px;
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, rgba(224,48,48,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .combine-header {
+    display: flex; align-items: flex-start; gap: 1.5rem;
+    margin-bottom: 1.75rem;
+  }
+  .combine-badge {
+    flex-shrink: 0;
+    width: 68px; height: 68px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, rgba(224,48,48,0.2), rgba(224,48,48,0.08));
+    border: 1px solid rgba(224,48,48,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem;
+  }
+  .combine-title {
+    font-size: 1.6rem; font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--accent);
+    margin-bottom: 0.35rem;
+  }
+  .combine-subtitle {
+    font-size: 0.9rem; color: var(--text-2);
+  }
+  .combine-body {
+    font-size: 0.97rem; color: var(--text-2);
+    line-height: 1.8;
+  }
+  .combine-body p { margin-bottom: 1rem; }
+  .combine-body p:last-child { margin-bottom: 0; }
+  .combine-body strong { color: var(--text); }
+  .combine-body .highlight {
+    color: var(--accent); font-weight: 700;
+  }
+
+  /* ===================== PROCESS STEPS ===================== */
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 3rem;
+  }
+  .step-card {
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem 1.5rem;
+    position: relative;
+    transition: transform var(--transition), border-color var(--transition);
+  }
+  .step-card:hover { transform: translateY(-3px); border-color: var(--border-hover); }
+  .step-number {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #b81c1c);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; font-weight: 800; color: #fff;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 14px rgba(224,48,48,0.35);
+  }
+  .step-title {
+    font-size: 1rem; font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  .step-desc {
+    font-size: 0.85rem; color: var(--text-2);
+    line-height: 1.65;
+  }
+
+  /* ===================== SCORING SUMMARY TABLE ===================== */
+  .summary-card {
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    margin-bottom: 3rem;
+  }
+  .summary-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .summary-table th {
+    padding: 1rem 1.5rem;
+    font-size: 0.72rem; font-weight: 700;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-3);
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+  .summary-table td {
+    padding: 1rem 1.5rem;
+    font-size: 0.92rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-2);
+    vertical-align: middle;
+  }
+  .summary-table tr:last-child td { border-bottom: none; }
+  .summary-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .pts-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 52px;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-size: 0.9rem; font-weight: 800;
+  }
+  .pts-badge.gold { background: rgba(245,158,11,0.15); color: var(--gold); border: 1px solid rgba(245,158,11,0.3); }
+  .pts-badge.silver { background: rgba(148,163,184,0.12); color: var(--silver); border: 1px solid rgba(148,163,184,0.25); }
+  .pts-badge.bronze { background: rgba(205,124,47,0.12); color: var(--bronze); border: 1px solid rgba(205,124,47,0.25); }
+  .pts-badge.combine { background: rgba(224,48,48,0.12); color: var(--accent); border: 1px solid rgba(224,48,48,0.3); }
+  .placement-icon { font-size: 1.3rem; margin-right: 0.5rem; vertical-align: middle; }
+  .placement-name { font-weight: 600; color: var(--text); }
+
+  /* ===================== FAQ / CALLOUT ===================== */
+  .callout {
+    background: linear-gradient(135deg, rgba(48,96,232,0.08) 0%, rgba(48,96,232,0.04) 100%);
+    border: 1px solid rgba(48,96,232,0.2);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem 2rem;
+    margin-bottom: 3rem;
+    display: flex; gap: 1rem; align-items: flex-start;
+  }
+  .callout-icon { font-size: 1.5rem; flex-shrink: 0; margin-top: 2px; }
+  .callout-text { font-size: 0.92rem; color: var(--text-2); line-height: 1.7; }
+  .callout-text strong { color: var(--text); }
+
+  /* ===================== FOOTER ===================== */
+  footer {
+    position: relative; z-index: 1;
+    text-align: center;
+    padding: 2rem;
+    font-size: 0.82rem;
+    color: var(--text-3);
+    border-top: 1px solid var(--border);
+  }
+  footer span { color: var(--accent); font-weight: 600; }
+  footer a { color: var(--text-2); text-decoration: none; }
+  footer a:hover { color: var(--text); }
+
+  /* ===================== RESPONSIVE ===================== */
+  @media (max-width: 640px) {
+    .combine-header { flex-direction: column; gap: 1rem; }
+    .hero-nav-links .nav-link span.label { display: none; }
+    .medal-grid { grid-template-columns: 1fr 1fr; }
+    .combine-section { padding: 1.75rem 1.25rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-mesh"></div>
+<div class="bg-grid"></div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-bg-img"></div>
+  <div class="hero-overlay"></div>
+  <div class="hero-fade"></div>
+  <nav class="hero-nav">
+    <a href="https://www.shotocup.com" target="_blank" rel="noopener" class="hero-logo">
+      <img src="https://static.wixstatic.com/media/d0d6bc_f5a82562602d4f24b2c9d76533006967~mv2.png/v1/crop/x_0,y_169,w_2005,h_443/fill/w_520,h_115,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/SHOTO%20CUP%20CORPORATE%20LOGOwhite.png" alt="Shoto Cup">
+    </a>
+    <div class="hero-nav-links">
+      <a href="index.html" class="nav-link">&#127968; Home</a>
+      <a href="scoring-system.html" class="nav-link active">&#127942; Scoring System</a>
+    </div>
+  </nav>
+  <div class="hero-content">
+    <div class="hero-eyebrow">
+      <span class="dot"></span>
+      Official Point System
+    </div>
+    <h1 class="hero-title">Shoto<span>Cup</span><br>Scoring</h1>
+    <p class="hero-sub">Understand how athletes earn points, how the Combine bonus works, and how the cumulative rankings are built across every season.</p>
+  </div>
+</section>
+
+<!-- Page Content -->
+<main class="page-section">
+
+  <!-- Medal Points -->
+  <div style="margin-bottom: 3rem;">
+    <div class="section-header">
+      <div class="section-eyebrow">&#127942; Standard Placement Points</div>
+      <div class="section-title">How Points Are Awarded</div>
+      <p class="section-desc">At every Shoto Cup event, athletes compete in their respective divisions. Points are awarded based on final placement in each division. These points accumulate across all events within a season and across all seasons to build the overall rankings.</p>
+    </div>
+
+    <div class="medal-grid">
+      <!-- Gold -->
+      <div class="medal-card gold">
+        <span class="medal-icon">&#129351;</span>
+        <div class="medal-label">1st Place</div>
+        <div class="medal-name">Gold</div>
+        <div class="medal-pts">15</div>
+        <div class="medal-pts-label">points</div>
+        <div class="medal-desc">Awarded to the athlete who places first in their division at any sanctioned Shoto Cup event.</div>
+      </div>
+      <!-- Silver -->
+      <div class="medal-card silver">
+        <span class="medal-icon">&#129352;</span>
+        <div class="medal-label">2nd Place</div>
+        <div class="medal-name">Silver</div>
+        <div class="medal-pts">10</div>
+        <div class="medal-pts-label">points</div>
+        <div class="medal-desc">Awarded to the athlete who places second in their division at any sanctioned Shoto Cup event.</div>
+      </div>
+      <!-- Bronze -->
+      <div class="medal-card bronze">
+        <span class="medal-icon">&#129353;</span>
+        <div class="medal-label">3rd Place</div>
+        <div class="medal-name">Bronze</div>
+        <div class="medal-pts">5</div>
+        <div class="medal-pts-label">points</div>
+        <div class="medal-desc">Awarded to the athlete who places third in their division at any sanctioned Shoto Cup event.</div>
+      </div>
+      <!-- Combine -->
+      <div class="medal-card combine">
+        <span class="medal-icon">&#9889;</span>
+        <div class="medal-label">Bonus Round</div>
+        <div class="medal-name">Combine Winner</div>
+        <div class="medal-pts">30</div>
+        <div class="medal-pts-label">points</div>
+        <div class="medal-desc">The highest single-event point award, earned exclusively through the Combine championship round.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Reference Table -->
+  <div style="margin-bottom: 3rem;">
+    <div class="section-header">
+      <div class="section-eyebrow">&#128203; Quick Reference</div>
+      <div class="section-title">Points at a Glance</div>
+    </div>
+    <div class="summary-card">
+      <table class="summary-table">
+        <thead>
+          <tr>
+            <th>Placement</th>
+            <th>Award</th>
+            <th>Points</th>
+            <th>Available At</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="placement-icon">&#129351;</span><span class="placement-name">1st Place</span></td>
+            <td>Gold Medal</td>
+            <td><span class="pts-badge gold">15 pts</span></td>
+            <td>All standard events</td>
+          </tr>
+          <tr>
+            <td><span class="placement-icon">&#129352;</span><span class="placement-name">2nd Place</span></td>
+            <td>Silver Medal</td>
+            <td><span class="pts-badge silver">10 pts</span></td>
+            <td>All standard events</td>
+          </tr>
+          <tr>
+            <td><span class="placement-icon">&#129353;</span><span class="placement-name">3rd Place</span></td>
+            <td>Bronze Medal</td>
+            <td><span class="pts-badge bronze">5 pts</span></td>
+            <td>All standard events</td>
+          </tr>
+          <tr>
+            <td><span class="placement-icon">&#9889;</span><span class="placement-name">Combine Winner</span></td>
+            <td>Combine Championship</td>
+            <td><span class="pts-badge combine">30 pts</span></td>
+            <td>Combine bonus round only</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Combine Explainer -->
+  <div style="margin-bottom: 3rem;">
+    <div class="section-header">
+      <div class="section-eyebrow">&#9889; Bonus Round</div>
+      <div class="section-title">The Combine Championship</div>
+    </div>
+
+    <div class="combine-section">
+      <div class="combine-glow"></div>
+      <div class="combine-header">
+        <div class="combine-badge">&#9889;</div>
+        <div>
+          <div class="combine-title">Combine Winner — 30 Points</div>
+          <div class="combine-subtitle">The most prestigious single-event award in the Shoto Cup</div>
+        </div>
+      </div>
+      <div class="combine-body">
+        <p>
+          The <strong>Combine</strong> is an elite bonus round held at select Shoto Cup events. It is not a standard division — it is an invitation-only championship that pits the very best athletes against each other in a head-to-head showdown.
+        </p>
+        <p>
+          <strong>Who qualifies?</strong> The Combine is open exclusively to the <span class="highlight">Gold Medal winners</span> from the <strong>Kata</strong> and <strong>Kobudo</strong> divisions at that event. Only athletes who have already proven themselves by winning their individual division are eligible to enter the Combine round.
+        </p>
+        <p>
+          <strong>How it works:</strong> The Kata champion and the Kobudo champion go head-to-head in a single combined performance round. Judges evaluate both athletes on a unified scoring criteria, and the winner of this showdown is crowned the <span class="highlight">Combine Champion</span> — earning a massive <strong>30-point bonus</strong> on top of the 15 points already earned for their Gold Medal placement.
+        </p>
+        <p>
+          <strong>Why 30 points?</strong> The Combine represents the pinnacle of performance at any given event. An athlete who wins both their division <em>and</em> the Combine in a single event can earn up to <span class="highlight">45 points</span> (15 for Gold + 30 for Combine) — making it the single biggest points opportunity in the entire Shoto Cup season.
+        </p>
+      </div>
+    </div>
+
+    <!-- How the Combine works step by step -->
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-number">1</div>
+        <div class="step-title">Compete in Your Division</div>
+        <div class="step-desc">Athletes compete in their standard Kata or Kobudo division and must place 1st (Gold) to qualify for the Combine.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">2</div>
+        <div class="step-title">Earn Your Gold</div>
+        <div class="step-desc">The Gold Medal winner from Kata and the Gold Medal winner from Kobudo are automatically entered into the Combine round.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">3</div>
+        <div class="step-title">Head-to-Head Showdown</div>
+        <div class="step-desc">The two Gold medalists perform in a head-to-head Combine round judged on a unified criteria combining elements of both disciplines.</div>
+      </div>
+      <div class="step-card">
+        <div class="step-number">4</div>
+        <div class="step-title">Combine Champion Crowned</div>
+        <div class="step-desc">The winner of the Combine earns 30 bonus points — the highest single-event points award in the Shoto Cup system.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cumulative Rankings Callout -->
+  <div class="callout">
+    <div class="callout-icon">&#128200;</div>
+    <div class="callout-text">
+      <strong>How the Rankings Are Built:</strong> Points earned at every sanctioned Shoto Cup event are cumulative. An athlete's total points are the sum of all placements — Gold, Silver, Bronze, and Combine wins — across every event they have competed in throughout all seasons. The rankings table on the <a href="index.html">Home page</a> reflects this full cumulative total, while the Top 5 Podium can be filtered by individual season to see who dominated each year.
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <p>Shoto Cup Rankings &mdash; Powered by <span>Shoto Cup</span> &bull; <a href="index.html">Back to Rankings</a> &bull; <a href="https://www.shotocup.com" target="_blank">shotocup.com</a></p>
+</footer>
+
+</body>
+</html>

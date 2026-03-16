@@ -89,6 +89,34 @@
     display: block;
     filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
   }
+  /* Site navigation links in hero nav */
+  .hero-nav-links {
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .nav-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 18px;
+    border-radius: 100px;
+    font-size: 0.82rem; font-weight: 700;
+    text-decoration: none;
+    letter-spacing: 0.04em;
+    color: rgba(255,255,255,0.75);
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(12px);
+    transition: all var(--transition);
+  }
+  .nav-link:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.22);
+  }
+  .nav-link.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 14px rgba(224,48,48,0.35);
+  }
 
   /* ===================== HERO ===================== */
   .hero {
@@ -771,6 +799,10 @@
     <a href="https://www.shotocup.com" target="_blank" rel="noopener" class="hero-logo">
       <img src="https://static.wixstatic.com/media/d0d6bc_f5a82562602d4f24b2c9d76533006967~mv2.png/v1/crop/x_0,y_169,w_2005,h_443/fill/w_520,h_115,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/SHOTO%20CUP%20CORPORATE%20LOGOwhite.png" alt="Shoto Cup">
     </a>
+    <div class="hero-nav-links">
+      <a href="index.html" class="nav-link active">&#127968; Home</a>
+      <a href="scoring-system.html" class="nav-link">&#127942; Scoring System</a>
+    </div>
   </nav>
   <div class="hero-content">
     <div class="hero-eyebrow">
