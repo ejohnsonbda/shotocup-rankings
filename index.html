@@ -70,15 +70,37 @@
     mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
   }
 
+  /* ===================== HERO NAV ===================== */
+  .hero-nav {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.4rem clamp(1.5rem, 5vw, 5rem);
+    z-index: 4;
+  }
+  .hero-logo {
+    display: flex; align-items: center;
+    text-decoration: none;
+    transition: opacity var(--transition);
+  }
+  .hero-logo:hover { opacity: 0.85; }
+  .hero-logo img {
+    height: 44px;
+    width: auto;
+    display: block;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+  }
+
   /* ===================== HERO ===================== */
   .hero {
     position: relative;
     min-height: 68vh;
     display: flex;
-    align-items: flex-end;
-    padding: 0 clamp(1.5rem, 5vw, 5rem) 4rem;
+    align-items: center;
+    justify-content: center;
+    padding: 6rem clamp(1.5rem, 5vw, 5rem) 5rem;
     overflow: hidden;
     z-index: 1;
+    text-align: center;
   }
   .hero-bg-img {
     position: absolute; inset: 0;
@@ -105,7 +127,11 @@
   }
   .hero-content {
     position: relative; z-index: 3;
-    max-width: 900px;
+    max-width: 800px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
   .hero-eyebrow {
     display: inline-flex; align-items: center; gap: 8px;
@@ -144,6 +170,7 @@
     font-weight: 400;
     color: var(--text-2);
     max-width: 560px;
+    text-align: center;
   }
 
   /* ===================== MAIN LAYOUT ===================== */
@@ -661,6 +688,12 @@
   <div class="hero-bg-img"></div>
   <div class="hero-overlay"></div>
   <div class="hero-fade"></div>
+  <!-- Logo Nav -->
+  <nav class="hero-nav">
+    <a href="https://www.shotocup.com" target="_blank" rel="noopener" class="hero-logo">
+      <img src="https://static.wixstatic.com/media/d0d6bc_f5a82562602d4f24b2c9d76533006967~mv2.png/v1/crop/x_0,y_169,w_2005,h_443/fill/w_520,h_115,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/SHOTO%20CUP%20CORPORATE%20LOGOwhite.png" alt="Shoto Cup">
+    </a>
+  </nav>
   <div class="hero-content">
     <div class="hero-eyebrow">
       <span class="dot"></span>
